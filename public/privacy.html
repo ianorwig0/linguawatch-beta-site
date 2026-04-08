@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Privacy — LinguaWatch</title>
+    <style>
+      :root {
+        --bg: #090f1c;
+        --text: #e2e8f0;
+        --muted: #94a3b8;
+        --accent: #a855f7;
+      }
+      body {
+        margin: 0;
+        font-family: system-ui, sans-serif;
+        background: var(--bg);
+        color: var(--text);
+        line-height: 1.6;
+        padding: 2rem 1.25rem 4rem;
+        max-width: 40rem;
+        margin-left: auto;
+        margin-right: auto;
+      }
+      h1 {
+        font-size: 1.5rem;
+        margin: 0 0 0.5rem;
+      }
+      .eyebrow {
+        color: var(--accent);
+        text-transform: uppercase;
+        letter-spacing: 0.12em;
+        font-size: 0.7rem;
+        margin: 0 0 1rem;
+      }
+      p {
+        color: var(--muted);
+        margin: 0 0 1rem;
+      }
+      a {
+        color: #c4b5fd;
+      }
+      a:hover {
+        color: #fff;
+      }
+    </style>
+  </head>
+  <body>
+    <p class="eyebrow">LinguaWatch</p>
+    <h1>Privacy</h1>
+    <p>
+      LinguaWatch is a browser extension that helps you learn language while watching captioned videos on YouTube. This
+      page describes what data is involved in the beta.
+    </p>
+    <p>
+      <strong>Video captions.</strong> The extension reads caption text from the page so it can choose phrases and build
+      lessons. It does not upload your full watch history to LinguaWatch servers (there is no LinguaWatch server in this
+      beta).
+    </p>
+    <p>
+      <strong>OpenAI.</strong> To generate translations, teaching content, and optional audio, the extension sends text
+      (the selected phrase and related lesson content) to OpenAI’s API using an API key configured in the extension. That
+      means OpenAI processes those requests under their policies.
+    </p>
+    <p>
+      <strong>Settings.</strong> Extension preferences (such as on/off for the current site) may be stored in your
+      browser via Firefox sync storage if you use sync.
+    </p>
+    <p>
+      <strong>Contact.</strong> For beta questions, use whatever channel the developer shared with you.
+    </p>
+    <p><a href="/">← Back to home</a></p>
+  </body>
+</html>

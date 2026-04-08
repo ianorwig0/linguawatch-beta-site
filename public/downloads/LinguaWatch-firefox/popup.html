@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>LinguaWatch</title>
+    <link rel="stylesheet" href="popup.css" />
+  </head>
+  <body>
+    <div class="lw-popup">
+      <header class="lw-popup-header">
+        <div class="lw-popup-brand">
+          <img class="lw-popup-icon" src="icons/icon-48.png" width="40" height="40" alt="" />
+          <div>
+            <h1 class="lw-popup-title">LinguaWatch</h1>
+            <p class="lw-popup-tagline">Learn Spanish while you watch</p>
+          </div>
+        </div>
+      </header>
+
+      <div class="lw-status" id="lw-status" role="status">
+        <span class="lw-status-dot" id="lw-status-dot" aria-hidden="true"></span>
+        <span id="lw-status-text">Checking…</span>
+      </div>
+
+      <section class="lw-section">
+        <div class="lw-row">
+          <div>
+            <label class="lw-label" for="lw-enabled">Extension enabled</label>
+            <p class="lw-hint">Turn all LinguaWatch features on or off.</p>
+          </div>
+          <label class="lw-switch">
+            <input type="checkbox" id="lw-enabled" />
+            <span class="lw-switch-slider" aria-hidden="true"></span>
+          </label>
+        </div>
+      </section>
+
+      <section class="lw-section">
+        <div class="lw-row">
+          <div>
+            <label class="lw-label" for="lw-site">Enabled on this site</label>
+            <p class="lw-hint" id="lw-hostname"></p>
+          </div>
+          <label class="lw-switch">
+            <input type="checkbox" id="lw-site-enabled" />
+            <span class="lw-switch-slider" aria-hidden="true"></span>
+          </label>
+        </div>
+      </section>
+
+      <section class="lw-section">
+        <label class="lw-label" for="lw-lang">Target language</label>
+        <select id="lw-lang" class="lw-select">
+          <option value="es" selected>Spanish</option>
+          <option value="more" disabled>More languages coming soon</option>
+        </select>
+      </section>
+
+      <section class="lw-section">
+        <label class="lw-label" for="lw-frequency">
+          Lesson frequency: <strong id="lw-frequency-value">8</strong> min (range)
+        </label>
+        <p class="lw-hint">Lessons appear at random intervals starting near this value (up to +5 min, max 15).</p>
+        <input type="range" id="lw-frequency" class="lw-range" min="5" max="15" step="1" value="8" />
+        <div class="lw-range-ticks">
+          <span>5</span>
+          <span>15</span>
+        </div>
+      </section>
+
+      <footer class="lw-popup-footer">
+        <button type="button" class="lw-btn-primary" id="lw-save">Save settings</button>
+        <p class="lw-save-msg" id="lw-save-msg" aria-live="polite"></p>
+      </footer>
+    </div>
+    <script src="popup.js"></script>
+  </body>
+</html>
