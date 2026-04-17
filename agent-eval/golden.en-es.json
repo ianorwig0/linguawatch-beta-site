@@ -1,0 +1,34 @@
+[
+  {
+    "id": "gold_en_to_es_001",
+    "direction": "en_to_es",
+    "sourcePhrase": "I have been waiting for this all week.",
+    "requiredInTranslation": ["esperando"],
+    "forbiddenInTranslation": ["vosotros"],
+    "requiredExampleTargetHints": ["el", "la", "de", "que"]
+  },
+  {
+    "id": "gold_en_to_es_002",
+    "direction": "en_to_es",
+    "sourcePhrase": "Can you turn the subtitles on?",
+    "requiredInTranslation": ["subt"],
+    "forbiddenInTranslation": ["vosotros"],
+    "requiredExampleTargetHints": ["el", "la", "de", "que"]
+  },
+  {
+    "id": "gold_es_to_en_001",
+    "direction": "es_to_en",
+    "sourcePhrase": "Llevo toda la semana esperando esto.",
+    "requiredInTranslation": ["week", "waiting"],
+    "forbiddenInTranslation": ["vosotros"],
+    "requiredExampleTargetHints": ["the", "is", "are", "for"]
+  },
+  {
+    "id": "gold_es_to_en_002",
+    "direction": "es_to_en",
+    "sourcePhrase": "Si salimos ahora, tal vez alcancemos el tren.",
+    "requiredInTranslation": ["if", "train"],
+    "forbiddenInTranslation": ["vosotros"],
+    "requiredExampleTargetHints": ["the", "is", "are", "for"]
+  }
+]

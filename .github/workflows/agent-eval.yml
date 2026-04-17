@@ -1,0 +1,40 @@
+name: Agent Eval
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+jobs:
+  eval:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Secret scan
+        run: npm run scan:secrets
+
+      - name: Agent eval
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          EVAL_MODEL: gpt-4o-mini
+        run: npm run eval:agent
+
+      - name: Golden eval
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          EVAL_MODEL: gpt-4o-mini
+          MIN_GOLDEN_SCORE: "85"
+        run: npm run eval:golden
