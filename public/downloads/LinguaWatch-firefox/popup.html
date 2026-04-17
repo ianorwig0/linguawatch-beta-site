@@ -13,7 +13,7 @@
           <img class="lw-popup-icon" src="icons/icon-48.png" width="40" height="40" alt="" />
           <div>
             <h1 class="lw-popup-title">LinguaWatch</h1>
-            <p class="lw-popup-tagline">Learn languages while you watch</p>
+            <p class="lw-popup-tagline">Learn Spanish while you watch</p>
           </div>
         </div>
       </header>
@@ -37,25 +37,6 @@
       </section>
 
       <section class="lw-section">
-        <label class="lw-label">Platforms</label>
-        <p class="lw-hint">Enable or disable lessons by platform.</p>
-        <div class="lw-platform-list">
-          <label class="lw-check-row">
-            <input type="checkbox" id="lw-platform-youtube" />
-            <span>YouTube</span>
-          </label>
-          <label class="lw-check-row">
-            <input type="checkbox" id="lw-platform-netflix" />
-            <span>Netflix</span>
-          </label>
-          <label class="lw-check-row">
-            <input type="checkbox" id="lw-platform-max" />
-            <span>Max (HBO)</span>
-          </label>
-        </div>
-      </section>
-
-      <section class="lw-section">
         <div class="lw-row">
           <div>
             <label class="lw-label" for="lw-site">Enabled on this site</label>
@@ -69,24 +50,11 @@
       </section>
 
       <section class="lw-section">
-        <label class="lw-label" for="lw-direction">Lesson direction</label>
-        <select id="lw-direction" class="lw-select">
-          <option value="en_to_es" selected>English -> Spanish (LATAM)</option>
-          <option value="es_to_en">Spanish (LATAM) -> English</option>
+        <label class="lw-label" for="lw-lang">Target language</label>
+        <select id="lw-lang" class="lw-select">
+          <option value="es" selected>Spanish</option>
+          <option value="more" disabled>More languages coming soon</option>
         </select>
-      </section>
-
-      <section class="lw-section">
-        <label class="lw-label" for="lw-api-key">OpenAI API key</label>
-        <p class="lw-hint">Stored locally in your browser profile and used for translation/TTS requests.</p>
-        <input
-          id="lw-api-key"
-          class="lw-input"
-          type="password"
-          placeholder="sk-..."
-          autocomplete="off"
-          spellcheck="false"
-        />
       </section>
 
       <section class="lw-section">
@@ -105,12 +73,6 @@
         <button type="button" class="lw-btn-primary" id="lw-save">Save settings</button>
         <p class="lw-save-msg" id="lw-save-msg" aria-live="polite"></p>
       </footer>
-
-      <section class="lw-section lw-stats-panel">
-        <label class="lw-label">Session stats</label>
-        <p class="lw-hint" id="lw-stats-summary">Loading stats…</p>
-        <button type="button" class="lw-btn-secondary" id="lw-reset-stats">Reset stats</button>
-      </section>
     </div>
     <script src="popup.js"></script>
   </body>

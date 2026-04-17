@@ -1,76 +1,6 @@
 /* global browser */
 
-const DEFAULT_LESSON_DIRECTION = "en_to_es";
-const DEFAULT_METRICS = {
-  lessonsShown: 0,
-  lessonsCompleted: 0,
-  lessonsErrored: 0,
-  badTranslationReports: 0,
-};
-
-function getDirectionInfo(lessonDirection) {
-  if (lessonDirection === "es_to_en") {
-    return {
-      sourceLanguage: "Spanish (Latin American)",
-      targetLanguage: "English",
-      sourceKey: "sourceText",
-      targetKey: "targetText",
-      exampleSourceKey: "exampleSource",
-      exampleTargetKey: "exampleTarget",
-    };
-  }
-  return {
-    sourceLanguage: "English",
-    targetLanguage: "Spanish (Latin American)",
-    sourceKey: "sourceText",
-    targetKey: "targetText",
-    exampleSourceKey: "exampleSource",
-    exampleTargetKey: "exampleTarget",
-  };
-}
-
-async function getOpenAiApiKey() {
-  try {
-    const res = await browser.storage.local.get({ openaiApiKey: "" });
-    const key = typeof res.openaiApiKey === "string" ? res.openaiApiKey.trim() : "";
-    return key;
-  } catch (e) {
-    return "";
-  }
-}
-
-async function incrementMetric(metricKey) {
-  try {
-    const res = await browser.storage.local.get({ metrics: DEFAULT_METRICS });
-    const metrics = Object.assign({}, DEFAULT_METRICS, res.metrics || {});
-    metrics[metricKey] = Number(metrics[metricKey] || 0) + 1;
-    await browser.storage.local.set({ metrics: metrics });
-  } catch (e) {
-    console.warn("[LinguaWatch BG METRICS] increment failed", e);
-  }
-}
-
-async function addBadTranslationReport(payload) {
-  try {
-    const res = await browser.storage.local.get({
-      badTranslationReports: [],
-    });
-    const reports = Array.isArray(res.badTranslationReports) ? res.badTranslationReports.slice() : [];
-    reports.push({
-      sourcePhrase: payload && payload.sourcePhrase ? String(payload.sourcePhrase) : "",
-      translation: payload && payload.translation ? String(payload.translation) : "",
-      lessonDirection: payload && payload.lessonDirection ? String(payload.lessonDirection) : DEFAULT_LESSON_DIRECTION,
-      host: payload && payload.host ? String(payload.host) : "",
-      ts: payload && payload.ts ? Number(payload.ts) : Date.now(),
-    });
-    const trimmed = reports.slice(Math.max(0, reports.length - 100));
-    await browser.storage.local.set({
-      badTranslationReports: trimmed,
-    });
-  } catch (e) {
-    console.warn("[LinguaWatch BG METRICS] report save failed", e);
-  }
-}
+const OPENAI_API_KEY = "INSERT_KEY_HERE";
 
 function logTranslate(step, detail) {
   console.log("[LinguaWatch BG TRANSLATE]", step, detail !== undefined ? detail : "");
@@ -98,35 +28,31 @@ function stripJsonFences(text) {
   return t.trim();
 }
 
-function buildLocaleBlock(lessonDirection) {
-  if (lessonDirection === "es_to_en") {
+function buildLocaleBlock(targetLanguage) {
+  const lang = typeof targetLanguage === "string" ? targetLanguage.toLowerCase() : "es";
+  if (lang === "es" || lang.startsWith("es-")) {
     return [
-      "LOCALE: The source phrase is Latin American Spanish and the translation must be natural modern English.",
-      "Preserve intent and tone, and avoid robotic literal wording.",
-      "For wordBreakdown, sourceText must be Spanish and targetText must be English.",
+      "LOCALE (Spanish): Write ALL Spanish output in natural Latin American Spanish.",
+      "Use neutral LATAM conversational Spanish (not Spain): avoid vosotros/vosotras; use ustedes for plural 'you' where needed.",
+      "Prefer vocabulary and phrasing common in Latin America when a word could be Spain-specific vs LATAM (e.g. ordenador vs computadora — prefer LATAM).",
+      "Match the register of the English (casual vs formal); do not add slang unless the source is informal.",
+      "translation, wordBreakdown[].spanish, and exampleEs must all follow the same locale consistently.",
     ].join(" ");
   }
-  return [
-    "LOCALE: The source phrase is English and all Spanish output must be natural Latin American Spanish.",
-    "Use neutral LATAM conversational Spanish (not Spain): avoid vosotros/vosotras; use ustedes for plural 'you' where needed.",
-    "Prefer vocabulary common in Latin America when wording differs.",
-    "For wordBreakdown, sourceText must be English and targetText must be Spanish.",
-    "Match register (casual/formal) from the source phrase.",
-  ].join(" ");
+  return "Use natural target-language Spanish consistent with the user's language setting.";
 }
 
-function buildTranslateSystemPrompt(lessonDirection) {
-  const info = getDirectionInfo(lessonDirection);
-  const locale = buildLocaleBlock(lessonDirection);
+function buildTranslateSystemPrompt(targetLanguage) {
+  const locale = buildLocaleBlock(targetLanguage);
   return [
-    "You are a fun, conversational language tutor.",
+    "You are a fun, conversational Spanish language tutor.",
     locale,
-    "Given a source phrase from a streaming video subtitle, respond ONLY with a valid JSON object containing exactly these fields:",
-    "translation (string in " + info.targetLanguage + ", faithful to meaning in context and natural sounding),",
-    "wordBreakdown (array of objects each with sourceText and targetText string fields, one per key word, maximum 6 words),",
+    "Given an English phrase from a YouTube video, respond ONLY with a valid JSON object containing exactly these fields:",
+    "translation (Spanish string, faithful to meaning in context — natural, not word-for-word if unnatural),",
+    "wordBreakdown (array of objects each with english and spanish string fields, one per key word, maximum 6 words; Spanish must match the same locale as translation),",
     "grammarNote (one simple grammar rule this phrase demonstrates, plain English, under 30 words),",
-    "exampleSource (one new example sentence in " + info.sourceLanguage + " using the same grammar rule),",
-    "exampleTarget (translation of exampleSource in " + info.targetLanguage + ").",
+    "exampleEs (one new example sentence in Spanish using the same grammar rule; same locale as translation),",
+    "exampleEn (English translation of exampleEs).",
     "Return ONLY the JSON object, no markdown, no backticks, no explanation.",
   ].join(" ");
 }
@@ -138,20 +64,20 @@ function validateLessonJson(parsed) {
   if (parsed.wordBreakdown.length > 6) return false;
   for (let i = 0; i < parsed.wordBreakdown.length; i++) {
     const row = parsed.wordBreakdown[i];
-    if (!row || typeof row.sourceText !== "string" || typeof row.targetText !== "string") return false;
+    if (!row || typeof row.english !== "string" || typeof row.spanish !== "string") return false;
   }
   if (
     typeof parsed.grammarNote !== "string" ||
-    typeof parsed.exampleSource !== "string" ||
-    typeof parsed.exampleTarget !== "string"
+    typeof parsed.exampleEs !== "string" ||
+    typeof parsed.exampleEn !== "string"
   ) {
     return false;
   }
   return true;
 }
 
-async function fetchLessonJsonOnce(sourcePhrase, lessonDirection, strict, apiKey) {
-  const baseSystem = buildTranslateSystemPrompt(lessonDirection);
+async function fetchLessonJsonOnce(englishPhrase, targetLanguage, strict) {
+  const baseSystem = buildTranslateSystemPrompt(targetLanguage);
   const system =
     baseSystem +
     (strict
@@ -159,9 +85,9 @@ async function fetchLessonJsonOnce(sourcePhrase, lessonDirection, strict, apiKey
       : "");
 
   const user = strict
-    ? "Output one JSON object with keys translation, wordBreakdown, grammarNote, exampleSource, exampleTarget only. Phrase: " +
-      sourcePhrase
-    : "Translate and teach this phrase. Preserve intent and tone. Phrase: " + sourcePhrase;
+    ? "Output one JSON object with keys translation, wordBreakdown, grammarNote, exampleEs, exampleEn only. Phrase: " +
+      englishPhrase
+    : "Translate and teach this phrase. Preserve intent and tone. Phrase: " + englishPhrase;
 
   const body = JSON.stringify({
     model: "gpt-4o-mini",
@@ -177,7 +103,7 @@ async function fetchLessonJsonOnce(sourcePhrase, lessonDirection, strict, apiKey
   const res = await fetch("https://api.openai.com/v1/chat/completions", {
     method: "POST",
     headers: {
-      Authorization: "Bearer " + apiKey,
+      Authorization: "Bearer " + OPENAI_API_KEY,
       "Content-Type": "application/json",
     },
     body,
@@ -215,15 +141,10 @@ async function fetchLessonJsonOnce(sourcePhrase, lessonDirection, strict, apiKey
   return { ok: true, parsed: parsed };
 }
 
-async function handleTranslate(sourcePhrase, lessonDirection) {
-  const apiKey = await getOpenAiApiKey();
-  if (!apiKey) {
-    return "Translation failed: missing OpenAI API key. Open LinguaWatch popup and save your API key.";
-  }
-  const direction = lessonDirection === "es_to_en" ? "es_to_en" : DEFAULT_LESSON_DIRECTION;
-  logTranslate("start", { sourcePhrase, lessonDirection: direction });
+async function handleTranslate(englishPhrase, targetLanguage) {
+  logTranslate("start", { englishPhrase, targetLanguage: targetLanguage || "es" });
   try {
-    let result = await fetchLessonJsonOnce(sourcePhrase, direction, false, apiKey);
+    let result = await fetchLessonJsonOnce(englishPhrase, targetLanguage, false);
     if (result.error) {
       return result.error;
     }
@@ -233,7 +154,7 @@ async function handleTranslate(sourcePhrase, lessonDirection) {
     }
 
     logTranslate("retrying after invalid JSON or shape");
-    result = await fetchLessonJsonOnce(sourcePhrase, direction, true, apiKey);
+    result = await fetchLessonJsonOnce(englishPhrase, targetLanguage, true);
     if (result.error) {
       return result.error;
     }
@@ -250,10 +171,6 @@ async function handleTranslate(sourcePhrase, lessonDirection) {
 }
 
 async function handleTts(text, speed) {
-  const apiKey = await getOpenAiApiKey();
-  if (!apiKey) {
-    return "TTS failed: missing OpenAI API key. Open LinguaWatch popup and save your API key.";
-  }
   logTts("start", { textLength: text ? text.length : 0, speed });
   try {
     const body = JSON.stringify({
@@ -267,7 +184,7 @@ async function handleTts(text, speed) {
     const res = await fetch("https://api.openai.com/v1/audio/speech", {
       method: "POST",
       headers: {
-        Authorization: "Bearer " + apiKey,
+        Authorization: "Bearer " + OPENAI_API_KEY,
         "Content-Type": "application/json",
       },
       body,
@@ -315,11 +232,11 @@ browser.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   }
 
   if (message.type === "TRANSLATE") {
-    const sourcePhrase = message.sourcePhrase;
-    const lessonDirection = message.lessonDirection;
+    const englishPhrase = message.englishPhrase;
+    const targetLanguage = message.targetLanguage;
     (async () => {
       try {
-        const result = await handleTranslate(sourcePhrase, lessonDirection);
+        const result = await handleTranslate(englishPhrase, targetLanguage);
         sendResponse(result);
       } catch (err) {
         console.error("[LinguaWatch BG TRANSLATE] unhandled", err);
@@ -347,29 +264,6 @@ browser.runtime.onMessage.addListener((message, _sender, sendResponse) => {
         } catch (e2) {
           console.error("[LinguaWatch BG] sendResponse error", e2);
         }
-      }
-    })();
-    return true;
-  }
-
-  if (message.type === "METRIC_EVENT") {
-    const eventType = message.eventType;
-    const payload = message.payload || {};
-    (async () => {
-      if (eventType === "lesson_shown") {
-        await incrementMetric("lessonsShown");
-      } else if (eventType === "lesson_completed") {
-        await incrementMetric("lessonsCompleted");
-      } else if (eventType === "lesson_error") {
-        await incrementMetric("lessonsErrored");
-      } else if (eventType === "bad_translation_report") {
-        await incrementMetric("badTranslationReports");
-        await addBadTranslationReport(payload);
-      }
-      try {
-        sendResponse({ ok: true });
-      } catch (e) {
-        console.warn("[LinguaWatch BG METRICS] sendResponse failed", e);
       }
     })();
     return true;

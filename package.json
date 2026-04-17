@@ -16,10 +16,7 @@
     "start": "react-scripts start",
     "build": "react-scripts build",
     "test": "react-scripts test",
-    "eject": "react-scripts eject",
-    "eval:agent": "node ./agent-eval/run-agent-eval.mjs",
-    "eval:golden": "node ./agent-eval/run-golden-eval.mjs",
-    "scan:secrets": "node ./scripts/scan-extension-secrets.mjs"
+    "eject": "react-scripts eject"
   },
   "eslintConfig": {
     "extends": [

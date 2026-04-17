@@ -162,35 +162,6 @@ body {
   font-size: 0.95rem;
 }
 
-.lw-input {
-  width: 100%;
-  margin-top: 8px;
-  padding: 10px 12px;
-  border-radius: 12px;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  background: rgba(15, 23, 42, 0.9);
-  color: #e2e8f0;
-  font-size: 0.9rem;
-}
-
-.lw-platform-list {
-  display: grid;
-  gap: 8px;
-  margin-top: 10px;
-}
-
-.lw-check-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  color: #cbd5e1;
-  font-size: 0.85rem;
-}
-
-.lw-check-row input {
-  accent-color: #a855f7;
-}
-
 .lw-range {
   width: 100%;
   margin-top: 10px;
@@ -232,26 +203,6 @@ body {
 .lw-btn-primary:active {
   transform: translateY(1px);
   filter: brightness(0.96);
-}
-
-.lw-btn-secondary {
-  width: 100%;
-  border: 1px solid rgba(255, 255, 255, 0.18);
-  cursor: pointer;
-  padding: 10px 12px;
-  border-radius: 10px;
-  font-size: 0.82rem;
-  font-weight: 600;
-  color: #e2e8f0;
-  background: rgba(255, 255, 255, 0.04);
-}
-
-.lw-btn-secondary:hover {
-  background: rgba(255, 255, 255, 0.08);
-}
-
-.lw-stats-panel {
-  margin-top: 14px;
 }
 
 .lw-save-msg {

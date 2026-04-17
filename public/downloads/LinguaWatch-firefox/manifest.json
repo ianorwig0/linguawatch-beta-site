@@ -2,7 +2,7 @@
   "manifest_version": 2,
   "name": "LinguaWatch",
   "version": "1.0.0",
-  "description": "Learn English or Spanish while watching streaming videos",
+  "description": "Learn Spanish while watching YouTube",
   "icons": {
     "48": "icons/icon-48.png",
     "96": "icons/icon-96.png"
@@ -13,12 +13,7 @@
     "https://api.openai.com/",
     "https://www.youtube.com/",
     "https://m.youtube.com/",
-    "https://youtube.com/",
-    "https://www.netflix.com/",
-    "https://netflix.com/",
-    "https://www.max.com/",
-    "https://max.com/",
-    "https://play.hbomax.com/"
+    "https://youtube.com/"
   ],
   "background": {
     "scripts": ["background.js"]
@@ -36,12 +31,7 @@
       "matches": [
         "https://www.youtube.com/*",
         "https://m.youtube.com/*",
-        "https://youtube.com/*",
-        "https://www.netflix.com/*",
-        "https://netflix.com/*",
-        "https://www.max.com/*",
-        "https://max.com/*",
-        "https://play.hbomax.com/*"
+        "https://youtube.com/*"
       ],
       "js": ["content-script.js"],
       "css": ["overlay.css"],
