@@ -2,7 +2,7 @@
 
 const LESSON_MIN_MS = 5 * 60 * 1000;
 const LESSON_MAX_MS = 10 * 60 * 1000;
-const MIN_PHRASE_WORDS = 6;
+const MIN_PHRASE_WORDS = 5;
 const MAX_PHRASE_WORDS = 22;
 const MANUAL_MIN_PHRASE_WORDS = 4;
 const MANUAL_MAX_PHRASE_WORDS = 28;
@@ -11,6 +11,11 @@ const MAX_SAVED_LESSONS = 60;
 const SESSION_PHRASE_SYNC_MS = 2500;
 const REPLAY_SEEK_BACK_SEC = 4;
 const REPLAY_PLAY_MS = 4500;
+const TTS_SPEED_EN = 1.05;
+const TTS_SPEED_ES = 1.0;
+const TTS_GAP_MS = 180;
+const TTS_VOICE_EN = "onyx";
+const TTS_VOICE_ES = "nova";
 
 const DEFAULT_LESSON_FREQUENCY_MINUTES = Math.round((LESSON_MIN_MS + LESSON_MAX_MS) / 2 / 60000);
 
@@ -30,12 +35,6 @@ const VERB_INDICATORS = [
   "have",
   "has",
   "had",
-];
-
-const INTRO_PHRASES = [
-  "Quick pause — this line from the scene is worth learning.",
-  "From this moment in the video — listen to this line.",
-  "They just said something useful. Here it is.",
 ];
 
 let subtitleBuffer = [];
@@ -90,9 +89,30 @@ function stripPlayerUiGlue(raw) {
   return t.replace(/\s+/g, " ").trim();
 }
 
+/** YouTube captions use ">>" to mark a speaker change. Pick the most coherent
+ * speaker block instead of teaching a mashed-together two-speaker fragment. */
+function pickPrimarySpeakerFragment(text) {
+  const s = String(text || "");
+  if (s.indexOf(">>") === -1) return s.trim();
+  const parts = s
+    .split(/\s*>>+\s*/)
+    .map(function (p) {
+      return p.replace(/^\s*[-–—]\s*/, "").trim();
+    })
+    .filter(Boolean);
+  if (!parts.length) return s.trim();
+  // Prefer the longest segment (most content from one speaker), tie-broken by recency (last).
+  let best = parts[parts.length - 1];
+  for (let i = parts.length - 2; i >= 0; i--) {
+    if (parts[i].length > best.length) best = parts[i];
+  }
+  return best;
+}
+
 function cleanSubtitleText(raw) {
   if (!raw || typeof raw !== "string") return "";
   let t = stripPlayerUiGlue(raw);
+  t = pickPrimarySpeakerFragment(t);
 
   t = t.replace(/\[[^\]]*\]/g, " ");
   t = t.replace(/\([^)]*\)/g, " ");
@@ -232,20 +252,39 @@ function getBestCandidateFromRawSubtitle(rawText) {
   return null;
 }
 
+/** Build candidate sentences from the buffer:
+ *  - each single fragment
+ *  - consecutive 2- and 3-fragment joins (so a sentence split across captions still surfaces)
+ *  Preserves recency order (older first, newest last). */
+function assembleSentenceCandidates() {
+  const buf = subtitleBuffer;
+  const out = [];
+  const seen = Object.create(null);
+  const add = function (s) {
+    const v = String(s || "").replace(/\s+/g, " ").trim();
+    if (!v) return;
+    const key = v.toLowerCase();
+    if (seen[key]) return;
+    seen[key] = true;
+    out.push(v);
+  };
+  for (let i = 0; i < buf.length; i++) {
+    add(buf[i]);
+    if (i + 1 < buf.length) add(buf[i] + " " + buf[i + 1]);
+    if (i + 2 < buf.length) add(buf[i] + " " + buf[i + 1] + " " + buf[i + 2]);
+  }
+  return out;
+}
+
 function selectBestPhrase() {
-  const candidates = subtitleBuffer.filter(function (p) {
+  const assembled = assembleSentenceCandidates();
+  const candidates = assembled.filter(function (p) {
     const wc = countWords(p);
     return wc >= MIN_PHRASE_WORDS && wc <= MAX_PHRASE_WORDS;
   });
 
   const filtered = candidates.filter(function (p) {
-    if (p === lastPickedPhrase) return false;
-    let occ = 0;
-    for (let i = 0; i < subtitleBuffer.length; i++) {
-      if (subtitleBuffer[i] === p) occ++;
-    }
-    if (occ > 2) return false;
-    return true;
+    return p !== lastPickedPhrase;
   });
 
   if (!filtered.length) return null;
@@ -256,21 +295,19 @@ function selectBestPhrase() {
   for (let i = 0; i < filtered.length; i++) {
     const phrase = filtered[i];
     const wc = countWords(phrase);
-    let occ = 0;
-    for (let j = 0; j < subtitleBuffer.length; j++) {
-      if (subtitleBuffer[j] === phrase) occ++;
-    }
-    const extra = Math.max(0, occ - 1);
-    let score = Math.min(wc, 14) - 2 * extra;
+    let score = Math.min(wc, 14);
     if (phraseHasVerbIndicator(phrase)) score += 3;
     if (/[.!?]$/.test(phrase)) score += 2;
-    const recencyBoost = i / Math.max(1, filtered.length);
+    // Reward sentences that look like full thoughts (start with capital, end with terminator).
+    if (/^[A-Z]/.test(phrase) && /[.!?]$/.test(phrase)) score += 1;
+    // Strong recency boost — prefer what they just heard.
+    const recencyBoost = (i / Math.max(1, filtered.length)) * 2;
     score += recencyBoost;
     if (score > bestScore) {
       bestScore = score;
       best = phrase;
-    } else if (score === bestScore && best !== null) {
-      if (wc > countWords(best)) best = phrase;
+    } else if (score === bestScore && best !== null && wc > countWords(best)) {
+      best = phrase;
     }
   }
 
@@ -535,20 +572,30 @@ function getManualTriggerPhrase() {
 
   if (raw) {
     const cleaned = cleanSubtitleText(raw);
-    const direct = tryPhrase(cleaned);
-    if (direct) return direct;
 
     const chunks = splitIntoSentenceLikeChunks(cleaned);
+    // Prefer a complete sentence chunk (newest first).
     for (let i = chunks.length - 1; i >= 0; i--) {
       const hit = tryPhrase(chunks[i]);
       if (hit) return hit;
     }
+
+    // Then the whole cleaned line if it fits the manual window.
+    const direct = tryPhrase(cleaned);
+    if (direct) return direct;
 
     const clauses = splitLongPhraseIntoClauses(cleaned);
     for (let j = clauses.length - 1; j >= 0; j--) {
       const hit2 = tryPhrase(clauses[j]);
       if (hit2) return hit2;
     }
+  }
+
+  // Fall back to recent buffer-assembled sentences (newest first).
+  const assembled = assembleSentenceCandidates();
+  for (let k = assembled.length - 1; k >= 0; k--) {
+    const hit3 = tryPhrase(assembled[k]);
+    if (hit3) return hit3;
   }
 
   return subtitleBuffer.length > 0 ? String(subtitleBuffer[subtitleBuffer.length - 1] || "").trim() : "";
@@ -814,14 +861,16 @@ function populateBreakdownChips(wordBreakdown, focusWord) {
   return pairs;
 }
 
-async function speakText(text, speed, cancelRef) {
+async function speakText(text, speed, cancelRef, voice) {
   const value = String(text || "").trim();
   if (!value || (cancelRef && cancelRef.cancelled)) return;
-  const res = await browser.runtime.sendMessage({
+  const payload = {
     type: "TTS",
     text: value,
     speed: typeof speed === "number" ? speed : 1,
-  });
+  };
+  if (typeof voice === "string" && voice) payload.voice = voice;
+  const res = await browser.runtime.sendMessage(payload);
   if (cancelRef && cancelRef.cancelled) return;
   if (typeof res === "string" && res.indexOf("TTS failed") === 0) {
     showError(res);
@@ -834,8 +883,58 @@ async function speakText(text, speed, cancelRef) {
   await playAudioBase64(res);
 }
 
-function getRandomIntroPhrase() {
-  return INTRO_PHRASES[Math.floor(Math.random() * INTRO_PHRASES.length)];
+/** Fire-and-forget TTS fetch. Resolves to base64 string on success, or null on
+ *  failure / cancel. Used to prefetch audio in parallel with translation so the
+ *  teacher starts speaking the instant the lesson card paints. */
+async function fetchTtsB64(text, speed, cancelRef, voice) {
+  const value = String(text || "").trim();
+  if (!value || (cancelRef && cancelRef.cancelled)) return null;
+  try {
+    const payload = {
+      type: "TTS",
+      text: value,
+      speed: typeof speed === "number" ? speed : 1,
+    };
+    if (typeof voice === "string" && voice) payload.voice = voice;
+    const res = await browser.runtime.sendMessage(payload);
+    if (cancelRef && cancelRef.cancelled) return null;
+    if (typeof res !== "string" || !res.length) return null;
+    if (res.indexOf("TTS failed") === 0) {
+      console.warn("[LinguaWatch] TTS prefetch error", res);
+      return null;
+    }
+    return res;
+  } catch (e) {
+    console.warn("[LinguaWatch] TTS prefetch threw", e);
+    return null;
+  }
+}
+
+async function playPrefetchedOrSpeak(audioPromise, fallbackText, speed, cancelRef, voice) {
+  if (cancelRef && cancelRef.cancelled) return;
+  let b64 = null;
+  if (audioPromise && typeof audioPromise.then === "function") {
+    b64 = await audioPromise;
+  }
+  if (cancelRef && cancelRef.cancelled) return;
+  if (b64) {
+    try {
+      await playAudioBase64(b64);
+      return;
+    } catch (e) {
+      console.warn("[LinguaWatch] prefetched audio playback failed, retrying via speakText", e);
+    }
+  }
+  await speakText(fallbackText, speed, cancelRef, voice);
+}
+
+function revealAllLessonSteps() {
+  const root = document.getElementById("lw-overlay");
+  if (!root) return;
+  const steps = root.querySelectorAll(".lw-step");
+  for (let i = 0; i < steps.length; i++) steps[i].classList.remove("lw-hidden");
+  const chips = root.querySelectorAll("#lw-chips .lw-chip");
+  for (let i = 0; i < chips.length; i++) chips[i].classList.remove("lw-hidden");
 }
 
 function lwOverlayHeaderHtml() {
@@ -992,7 +1091,12 @@ function bindMicroChallenge(data, cancelRef) {
           feedbackEl.textContent = isCorrect ? "Nice work!" : "Almost! It means " + data.correctAnswer + ".";
           feedbackEl.classList.add("is-visible");
         }
-        await speakText(isCorrect ? "Nice work!" : "Almost! It means " + data.correctAnswer + ".", 1, cancelRef);
+        await speakText(
+          isCorrect ? "Nice work!" : "Almost! It means " + data.correctAnswer + ".",
+          TTS_SPEED_EN,
+          cancelRef,
+          TTS_VOICE_EN
+        );
         resolve();
       });
       optionsWrap.appendChild(btn);
@@ -1011,52 +1115,46 @@ function bindMicroChallenge(data, cancelRef) {
   });
 }
 
-async function runLessonFlow(data, cancelRef) {
+async function runLessonFlow(data, cancelRef, prefetched) {
   const summaryPair = data.focusWord || { english: data.correctAnswer || "", spanish: "" };
-  const pairs = populateBreakdownChips(data.wordBreakdown, summaryPair);
+  populateBreakdownChips(data.wordBreakdown, summaryPair);
 
-  // Step 1 - Anchor (spoken)
-  revealStep("lw-step-anchor");
-  await waitPaint();
-  await speakText(getRandomIntroPhrase(), 1, cancelRef);
-  await speakText(data.englishPhrase, 1, cancelRef);
-  if (!(await waitMs(800, cancelRef))) return;
-
-  // Step 2 - Reveal (spoken)
-  revealStep("lw-step-reveal");
-  if (!(await waitMs(600, cancelRef))) return;
-  await speakText(data.translation, 0.85, cancelRef);
-
-  // Step 3 - Breakdown (visual only — saves TTS latency/cost)
-  revealStep("lw-step-breakdown");
-  for (let i = 0; i < pairs.length; i++) {
-    if (cancelRef && cancelRef.cancelled) return;
-    pairs[i].el.classList.remove("lw-hidden");
-    if (!(await waitMs(pairs[i].isFocus ? 700 : 350, cancelRef))) return;
-  }
-
-  // Step 4 - Grammar (read on screen)
-  revealStep("lw-step-grammar");
-  if (!(await waitMs(2200, cancelRef))) return;
-
-  // Step 5 - Example (read on screen)
-  revealStep("lw-step-example");
-  if (!(await waitMs(2800, cancelRef))) return;
-
-  // Step 6 - Micro challenge (spoken question + feedback)
-  revealStep("lw-step-challenge");
-  await speakText(data.question, 1, cancelRef);
-  await bindMicroChallenge(data, cancelRef);
-
-  // Step 7 - Close
+  // Fill the close-step summary text up front so it's correct whenever we reveal it.
   const summaryWord = document.getElementById("lw-summary-es");
   if (summaryWord && summaryPair.spanish) summaryWord.textContent = summaryPair.spanish;
   const summaryLine = document.getElementById("lw-summary-en");
   if (summaryLine) summaryLine.textContent = data.correctAnswer || summaryPair.english || "";
-  revealStep("lw-step-close");
+
+  // Show everything at once — the teacher narrates, but the learner can read ahead.
+  revealAllLessonSteps();
   const continueBtn = document.getElementById("lw-continue");
   if (continueBtn) continueBtn.classList.add("lw-pulse");
-  await speakText("Great. Now back to the show.", 1, cancelRef);
+  await waitPaint();
+
+  // Teacher: English anchor line (prefetched in parallel with TRANSLATE).
+  await playPrefetchedOrSpeak(
+    prefetched ? prefetched.en : null,
+    data.englishPhrase,
+    TTS_SPEED_EN,
+    cancelRef,
+    TTS_VOICE_EN
+  );
+  if (cancelRef && cancelRef.cancelled) return;
+  if (!(await waitMs(TTS_GAP_MS, cancelRef))) return;
+
+  // Teacher: Spanish translation in a Spanish-friendlier voice
+  // (prefetch started the moment TRANSLATE resolved).
+  await playPrefetchedOrSpeak(
+    prefetched ? prefetched.es : null,
+    data.translation,
+    TTS_SPEED_ES,
+    cancelRef,
+    TTS_VOICE_ES
+  );
+  if (cancelRef && cancelRef.cancelled) return;
+
+  // Micro challenge — question is already on screen; user reads it.
+  await bindMicroChallenge(data, cancelRef);
 }
 
 function revealAllReviewSteps() {
@@ -1174,6 +1272,10 @@ async function triggerLesson(forcedPhrase, options) {
   const cancelRef = { cancelled: false, timeoutIds: [] };
   lessonCancel = cancelRef;
 
+  // Kick the English-line TTS fetch off immediately — in parallel with TRANSLATE —
+  // so the teacher can start speaking the moment the lesson card paints.
+  const enAudioPromise = fetchTtsB64(phrase, TTS_SPEED_EN, cancelRef, TTS_VOICE_EN);
+
   const video = document.querySelector("video");
   if (video) {
     if (typeof opts.videoTime === "number" && opts.videoTime >= 0) {
@@ -1235,6 +1337,16 @@ async function triggerLesson(forcedPhrase, options) {
     return;
   }
 
+  // Start the Spanish-line TTS fetch the instant we have the translation, in
+  // parallel with overlay swap + reveal. By the time the EN line finishes
+  // playing, the ES audio is normally already buffered.
+  const esAudioPromise = fetchTtsB64(
+    translateResult.translation,
+    TTS_SPEED_ES,
+    cancelRef,
+    TTS_VOICE_ES
+  );
+
   const focusWord = resolveFocusWord(translateResult);
 
   const data = {
@@ -1273,11 +1385,10 @@ async function triggerLesson(forcedPhrase, options) {
   maybeShowShiftLTip();
 
   try {
-    await runLessonFlow(data, cancelRef);
+    await runLessonFlow(data, cancelRef, { en: enAudioPromise, es: esAudioPromise });
   } catch (e) {
-    console.error("[LinguaWatch] TTS sequence", e);
+    console.error("[LinguaWatch] lesson flow", e);
     if (!cancelRef.cancelled) {
-      revealStep("lw-step-close");
       const continueBtn = document.getElementById("lw-continue");
       if (continueBtn) continueBtn.classList.add("lw-pulse");
     }
@@ -1289,18 +1400,47 @@ async function triggerLesson(forcedPhrase, options) {
   lessonCancel = null;
 }
 
+function pushBufferFragment(fragment) {
+  const chunk = String(fragment || "").trim();
+  if (!chunk) return false;
+  const last = subtitleBuffer.length ? subtitleBuffer[subtitleBuffer.length - 1] : "";
+  if (chunk === last) return false;
+  const lastLower = last.toLowerCase();
+  const chunkLower = chunk.toLowerCase();
+  if (last && chunkLower.indexOf(lastLower) === 0) {
+    // The growing caption now extends what we already had — replace in place.
+    subtitleBuffer[subtitleBuffer.length - 1] = chunk;
+    return true;
+  }
+  if (last && lastLower.indexOf(chunkLower) === 0) {
+    // We already have a longer version; ignore the stale prefix.
+    return false;
+  }
+  subtitleBuffer.push(chunk);
+  return true;
+}
+
 function pollSubtitles() {
   const raw = getSubtitleTextFromDom();
-  const candidate = getBestCandidateFromRawSubtitle(raw);
-  if (!candidate) return;
-  if (candidate === lastPushedSubtitle) return;
+  if (!raw) return;
+  const cleaned = cleanSubtitleText(raw);
+  if (!cleaned || cleaned === lastPushedSubtitle) return;
+  lastPushedSubtitle = cleaned;
 
-  lastPushedSubtitle = candidate;
-  subtitleBuffer.push(candidate);
+  let changed = false;
+  const chunks = splitIntoSentenceLikeChunks(cleaned);
+  if (chunks.length) {
+    for (let i = 0; i < chunks.length; i++) {
+      if (pushBufferFragment(chunks[i])) changed = true;
+    }
+  } else if (pushBufferFragment(cleaned)) {
+    changed = true;
+  }
+
   if (subtitleBuffer.length > MAX_BUFFER_SIZE) {
     subtitleBuffer = subtitleBuffer.slice(subtitleBuffer.length - MAX_BUFFER_SIZE);
   }
-  scheduleSessionPhraseSync();
+  if (changed) scheduleSessionPhraseSync();
 }
 
 function onStorageChanged(changes, area) {

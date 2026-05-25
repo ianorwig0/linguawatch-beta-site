@@ -283,8 +283,18 @@ async function handleTranslate(englishPhrase, targetLanguage, captionContext) {
   }
 }
 
-async function handleTts(text, speed) {
-  logTts("start", { textLength: text ? text.length : 0, speed });
+const TTS_VOICE_DEFAULT = "onyx";
+const TTS_ALLOWED_VOICES = ["alloy", "echo", "fable", "onyx", "nova", "shimmer"];
+
+function resolveTtsVoice(voice) {
+  if (typeof voice !== "string" || !voice) return TTS_VOICE_DEFAULT;
+  const v = voice.trim().toLowerCase();
+  return TTS_ALLOWED_VOICES.indexOf(v) !== -1 ? v : TTS_VOICE_DEFAULT;
+}
+
+async function handleTts(text, speed, voice) {
+  const resolvedVoice = resolveTtsVoice(voice);
+  logTts("start", { textLength: text ? text.length : 0, speed, voice: resolvedVoice });
   try {
     const apiKey = await getOpenAiApiKey();
     if (!apiKey) {
@@ -293,7 +303,7 @@ async function handleTts(text, speed) {
 
     const body = JSON.stringify({
       model: "tts-1",
-      voice: "onyx",
+      voice: resolvedVoice,
       input: text,
       speed: typeof speed === "number" && speed > 0 ? speed : 1,
     });
@@ -372,9 +382,10 @@ browser.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   if (message.type === "TTS") {
     const text = message.text;
     const speed = message.speed;
+    const voice = message.voice;
     (async () => {
       try {
-        const result = await handleTts(text, speed);
+        const result = await handleTts(text, speed, voice);
         sendResponse(result);
       } catch (err) {
         console.error("[LinguaWatch BG TTS] unhandled", err);
