@@ -29,13 +29,33 @@
   }
 }
 
+@keyframes lw-soft-fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes lw-pulse {
+  0%,
+  100% {
+    box-shadow: 0 10px 30px rgba(124, 58, 237, 0.35);
+  }
+  50% {
+    box-shadow: 0 12px 36px rgba(168, 85, 247, 0.55);
+  }
+}
+
 #lw-overlay {
   position: fixed;
   inset: 0;
   z-index: 2147483647;
-  background: rgba(0, 0, 0, 0.85);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
+  /* Solid scrim instead of backdrop-filter — blurring the YouTube page is very GPU-heavy and causes jank. */
+  background: rgba(0, 0, 0, 0.92);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -116,7 +136,7 @@
   width: 100%;
   border-radius: 999px;
   background: linear-gradient(90deg, #a855f7 0%, #f97316 100%);
-  animation: lw-progress-shrink 60s linear forwards;
+  opacity: 0.85;
 }
 
 #lw-grid {
@@ -125,6 +145,36 @@
   gap: 28px 36px;
   flex: 1;
   min-height: 0;
+}
+
+#lw-grid.lw-grid-single {
+  grid-template-columns: 1fr;
+  gap: 14px;
+}
+
+#lw-overlay .lw-step {
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.02);
+  padding: 14px 16px;
+  animation: lw-soft-fade-up 0.28s ease forwards;
+}
+
+#lw-overlay .lw-hidden {
+  display: none;
+}
+
+#lw-overlay .lw-step-label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.11em;
+  text-transform: uppercase;
+  color: #a855f7;
+  margin: 0 0 8px 0;
+}
+
+#lw-overlay .lw-step-soft {
+  color: #94a3b8;
 }
 
 @media (max-width: 900px) {
@@ -174,6 +224,15 @@
   line-height: 1.3;
   margin: 4px 4px 4px 0;
   background: rgba(249, 115, 22, 0.06);
+  animation: lw-soft-fade-up 0.22s ease forwards;
+}
+
+#lw-overlay .lw-chip-focus {
+  border-color: #fb923c;
+  color: #fff7ed;
+  background: rgba(249, 115, 22, 0.28);
+  font-weight: 600;
+  box-shadow: 0 0 0 1px rgba(251, 146, 60, 0.35);
 }
 
 #lw-overlay .lw-grammar,
@@ -187,6 +246,66 @@
 #lw-overlay .lw-example-es {
   color: #f97316;
   font-weight: 600;
+}
+
+#lw-overlay .lw-challenge-question {
+  color: #ffffff;
+  margin: 0 0 10px 0;
+  font-size: 1rem;
+}
+
+#lw-overlay .lw-options {
+  display: grid;
+  gap: 8px;
+}
+
+#lw-overlay .lw-option {
+  appearance: none;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.04);
+  color: #ffffff;
+  border-radius: 10px;
+  padding: 10px 12px;
+  text-align: left;
+  cursor: pointer;
+  font-size: 0.95rem;
+}
+
+#lw-overlay .lw-option:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+#lw-overlay .lw-option.is-correct {
+  border-color: rgba(34, 197, 94, 0.9);
+  background: rgba(34, 197, 94, 0.2);
+}
+
+#lw-overlay .lw-option.is-wrong {
+  border-color: rgba(239, 68, 68, 0.9);
+  background: rgba(239, 68, 68, 0.2);
+}
+
+#lw-overlay .lw-challenge-feedback {
+  margin: 10px 0 0;
+  color: #e2e8f0;
+  min-height: 20px;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+#lw-overlay .lw-challenge-feedback.is-visible {
+  opacity: 1;
+}
+
+#lw-overlay .lw-summary-line {
+  margin: 0;
+  color: #e2e8f0;
+  font-size: 1rem;
+}
+
+#lw-overlay .lw-summary-word {
+  color: #f97316;
+  font-weight: 700;
 }
 
 #lw-footer {
@@ -220,6 +339,10 @@
 #lw-continue:active {
   transform: translateY(0);
   filter: brightness(0.95);
+}
+
+#lw-continue.lw-pulse {
+  animation: lw-pulse 1.2s ease-in-out infinite;
 }
 
 #lw-loading {
@@ -264,4 +387,68 @@
   border-radius: 12px;
   margin-bottom: 12px;
   font-size: 0.95rem;
+}
+
+#lw-overlay .lw-review-card #lw-progress-wrap {
+  display: none;
+}
+
+#lw-overlay .lw-review-card #lw-step-anchor::before {
+  content: "Saved review";
+  display: inline-block;
+  margin-bottom: 8px;
+  padding: 2px 10px;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #e9d5ff;
+  background: rgba(124, 58, 237, 0.25);
+  border: 1px solid rgba(168, 85, 247, 0.35);
+}
+
+#lw-overlay .lw-btn-secondary {
+  appearance: none;
+  margin-top: 12px;
+  border: 1px solid rgba(168, 85, 247, 0.55);
+  background: rgba(124, 58, 237, 0.15);
+  color: #e9d5ff;
+  border-radius: 999px;
+  padding: 8px 18px;
+  font-size: 0.88rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s ease, border-color 0.2s ease;
+}
+
+#lw-overlay .lw-btn-secondary:hover {
+  background: rgba(124, 58, 237, 0.28);
+  border-color: rgba(168, 85, 247, 0.85);
+}
+
+.lw-page-toast {
+  position: fixed;
+  bottom: 88px;
+  left: 50%;
+  transform: translateX(-50%) translateY(12px);
+  z-index: 2147483646;
+  max-width: min(92vw, 520px);
+  padding: 12px 18px;
+  border-radius: 12px;
+  background: #1e1b4b;
+  border: 1px solid rgba(168, 85, 247, 0.45);
+  color: #f8fafc;
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  font-size: 0.9rem;
+  line-height: 1.4;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.25s ease, transform 0.25s ease;
+}
+
+.lw-page-toast.is-visible {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
 }

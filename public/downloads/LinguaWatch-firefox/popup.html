@@ -58,6 +58,19 @@
       </section>
 
       <section class="lw-section">
+        <label class="lw-label" for="lw-api-key">OpenAI API key</label>
+        <input
+          type="password"
+          id="lw-api-key"
+          class="lw-input"
+          placeholder="sk-..."
+          autocomplete="off"
+          spellcheck="false"
+        />
+        <p class="lw-hint">Stored only in your Firefox sync storage. Never hardcode this in shared builds.</p>
+      </section>
+
+      <section class="lw-section">
         <label class="lw-label" for="lw-frequency">
           Lesson frequency: <strong id="lw-frequency-value">8</strong> min (range)
         </label>
@@ -66,6 +79,33 @@
         <div class="lw-range-ticks">
           <span>5</span>
           <span>15</span>
+        </div>
+      </section>
+
+      <section class="lw-section lw-tip-box">
+        <p class="lw-label">Freeze &amp; learn</p>
+        <p class="lw-hint lw-hint-block">On YouTube, press <kbd>Shift</kbd>+<kbd>L</kbd> to start a lesson from the latest caption line.</p>
+      </section>
+
+      <section class="lw-section">
+        <div class="lw-section-head">
+          <label class="lw-label">This video</label>
+          <span class="lw-badge" id="lw-session-count">0</span>
+        </div>
+        <p class="lw-hint lw-hint-block" id="lw-session-video">Open a YouTube watch page to see recent caption lines.</p>
+        <ul class="lw-phrase-list" id="lw-session-phrases"></ul>
+      </section>
+
+      <section class="lw-section">
+        <div class="lw-section-head">
+          <label class="lw-label">Saved lessons</label>
+          <span class="lw-badge" id="lw-saved-count">0</span>
+        </div>
+        <p class="lw-hint lw-hint-block">Tap to review instantly. ↻ runs a fresh lesson (uses API).</p>
+        <ul class="lw-phrase-list lw-saved-list" id="lw-saved-lessons"></ul>
+        <div class="lw-mini-actions">
+          <button type="button" class="lw-btn-ghost" id="lw-export-csv">Export CSV</button>
+          <button type="button" class="lw-btn-ghost lw-btn-danger" id="lw-clear-saved">Clear saved</button>
         </div>
       </section>
 

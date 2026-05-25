@@ -1,13 +1,23 @@
 /* global browser */
 
-const OPENAI_API_KEY = "INSERT_KEY_HERE";
-
 function logTranslate(step, detail) {
   console.log("[LinguaWatch BG TRANSLATE]", step, detail !== undefined ? detail : "");
 }
 
 function logTts(step, detail) {
   console.log("[LinguaWatch BG TTS]", step, detail !== undefined ? detail : "");
+}
+
+function normalizeApiKey(value) {
+  let key = String(value || "").trim();
+  if (
+    (key.startsWith('"') && key.endsWith('"')) ||
+    (key.startsWith("'") && key.endsWith("'")) ||
+    (key.startsWith("`") && key.endsWith("`"))
+  ) {
+    key = key.slice(1, -1).trim();
+  }
+  return key.replace(/\s+/g, "");
 }
 
 function arrayBufferToBase64(buffer) {
@@ -45,22 +55,64 @@ function buildLocaleBlock(targetLanguage) {
 function buildTranslateSystemPrompt(targetLanguage) {
   const locale = buildLocaleBlock(targetLanguage);
   return [
-    "You are a fun, conversational Spanish language tutor.",
+    "You are a concise Spanish language tutor interrupting a YouTube video at one caption line.",
     locale,
-    "Given an English phrase from a YouTube video, respond ONLY with a valid JSON object containing exactly these fields:",
-    "translation (Spanish string, faithful to meaning in context — natural, not word-for-word if unnatural),",
-    "wordBreakdown (array of objects each with english and spanish string fields, one per key word, maximum 6 words; Spanish must match the same locale as translation),",
-    "grammarNote (one simple grammar rule this phrase demonstrates, plain English, under 30 words),",
-    "exampleEs (one new example sentence in Spanish using the same grammar rule; same locale as translation),",
-    "exampleEn (English translation of exampleEs).",
+    "You may receive recent caption lines for context. The anchor phrase is the line to teach — everything must explain THAT line, not a generic textbook example.",
+    "Respond ONLY with a valid JSON object containing exactly these fields:",
+    "translation (Spanish string for the anchor phrase — natural in context, not word-for-word if unnatural),",
+    "wordBreakdown (array of objects with english and spanish fields, 3–6 key words from the anchor phrase only; Spanish matches translation locale),",
+    "focusWord (object with english and spanish — the single most memorable word from wordBreakdown; must be identical to one wordBreakdown entry),",
+    "grammarNote (plain English, under 20 words, zero jargon: name the pattern shown IN the anchor phrase),",
+    "exampleEs (one new Spanish sentence reusing the same grammar pattern as the anchor phrase; same locale),",
+    "exampleEn (English gloss of exampleEs).",
+    "question (beginner-friendly MCQ testing the English meaning of focusWord.spanish only, e.g. 'What does <spanish> mean?'),",
+    "correctAnswer (short English meaning of focusWord.spanish),",
+    "distractors (array of exactly 2 plausible wrong English options).",
     "Return ONLY the JSON object, no markdown, no backticks, no explanation.",
   ].join(" ");
+}
+
+function focusWordMatchesBreakdown(focusWord, wordBreakdown) {
+  if (!focusWord || typeof focusWord !== "object") return false;
+  const fe = String(focusWord.english || "")
+    .trim()
+    .toLowerCase();
+  const fs = String(focusWord.spanish || "")
+    .trim()
+    .toLowerCase();
+  if (!fe || !fs) return false;
+  for (let i = 0; i < wordBreakdown.length; i++) {
+    const row = wordBreakdown[i];
+    if (
+      String(row.english || "")
+        .trim()
+        .toLowerCase() === fe &&
+      String(row.spanish || "")
+        .trim()
+        .toLowerCase() === fs
+    ) {
+      return true;
+    }
+  }
+  return false;
+}
+
+function ensureFocusWord(parsed) {
+  if (!parsed || !Array.isArray(parsed.wordBreakdown) || !parsed.wordBreakdown.length) return false;
+  if (focusWordMatchesBreakdown(parsed.focusWord, parsed.wordBreakdown)) return true;
+  const first = parsed.wordBreakdown[0];
+  if (!first || typeof first.english !== "string" || typeof first.spanish !== "string") return false;
+  parsed.focusWord = {
+    english: first.english.trim(),
+    spanish: first.spanish.trim(),
+  };
+  return true;
 }
 
 function validateLessonJson(parsed) {
   if (!parsed || typeof parsed !== "object") return false;
   if (typeof parsed.translation !== "string" || !parsed.translation.trim()) return false;
-  if (!Array.isArray(parsed.wordBreakdown)) return false;
+  if (!Array.isArray(parsed.wordBreakdown) || parsed.wordBreakdown.length < 2) return false;
   if (parsed.wordBreakdown.length > 6) return false;
   for (let i = 0; i < parsed.wordBreakdown.length; i++) {
     const row = parsed.wordBreakdown[i];
@@ -73,10 +125,70 @@ function validateLessonJson(parsed) {
   ) {
     return false;
   }
+  if (!ensureFocusWord(parsed)) return false;
+  if (typeof parsed.question !== "string" || !parsed.question.trim()) return false;
+  if (typeof parsed.correctAnswer !== "string" || !parsed.correctAnswer.trim()) return false;
+  if (!Array.isArray(parsed.distractors) || parsed.distractors.length !== 2) return false;
+  for (let i = 0; i < parsed.distractors.length; i++) {
+    if (typeof parsed.distractors[i] !== "string" || !parsed.distractors[i].trim()) return false;
+  }
   return true;
 }
 
-async function fetchLessonJsonOnce(englishPhrase, targetLanguage, strict) {
+function buildTranslateUserMessage(englishPhrase, captionContext, strict) {
+  const anchor = String(englishPhrase || "").trim();
+  const lines = Array.isArray(captionContext)
+    ? captionContext
+        .map(function (line) {
+          return String(line || "").trim();
+        })
+        .filter(Boolean)
+    : [];
+
+  const contextBlock =
+    lines.length > 1
+      ? "Recent caption lines from the video (context only):\n" +
+        lines
+          .map(function (line, idx) {
+            return idx + 1 + ". " + line;
+          })
+          .join("\n") +
+        "\n\n"
+      : "";
+
+  if (strict) {
+    return (
+      contextBlock +
+      "Output one JSON object with keys translation, wordBreakdown, focusWord, grammarNote, exampleEs, exampleEn, question, correctAnswer, distractors only.\n" +
+      "Anchor phrase to teach (explain THIS line only): " +
+      anchor
+    );
+  }
+
+  return (
+    contextBlock +
+    "Teach the anchor phrase using the caption context when helpful. Anchor phrase: " +
+    anchor
+  );
+}
+
+async function getOpenAiApiKey() {
+  try {
+    const data = await browser.storage.sync.get({ openaiApiKey: "" });
+    const key = normalizeApiKey(data.openaiApiKey);
+    return key;
+  } catch (err) {
+    console.error("[LinguaWatch BG] storage.get openaiApiKey failed", err);
+    return "";
+  }
+}
+
+async function fetchLessonJsonOnce(englishPhrase, targetLanguage, captionContext, strict) {
+  const apiKey = await getOpenAiApiKey();
+  if (!apiKey) {
+    return { error: "Translation failed: add your OpenAI API key in the LinguaWatch popup settings." };
+  }
+
   const baseSystem = buildTranslateSystemPrompt(targetLanguage);
   const system =
     baseSystem +
@@ -84,10 +196,7 @@ async function fetchLessonJsonOnce(englishPhrase, targetLanguage, strict) {
       ? " Output must be a single raw JSON object only. No markdown fences, no commentary before or after the JSON."
       : "");
 
-  const user = strict
-    ? "Output one JSON object with keys translation, wordBreakdown, grammarNote, exampleEs, exampleEn only. Phrase: " +
-      englishPhrase
-    : "Translate and teach this phrase. Preserve intent and tone. Phrase: " + englishPhrase;
+  const user = buildTranslateUserMessage(englishPhrase, captionContext, strict);
 
   const body = JSON.stringify({
     model: "gpt-4o-mini",
@@ -103,7 +212,7 @@ async function fetchLessonJsonOnce(englishPhrase, targetLanguage, strict) {
   const res = await fetch("https://api.openai.com/v1/chat/completions", {
     method: "POST",
     headers: {
-      Authorization: "Bearer " + OPENAI_API_KEY,
+      Authorization: "Bearer " + apiKey,
       "Content-Type": "application/json",
     },
     body,
@@ -141,10 +250,14 @@ async function fetchLessonJsonOnce(englishPhrase, targetLanguage, strict) {
   return { ok: true, parsed: parsed };
 }
 
-async function handleTranslate(englishPhrase, targetLanguage) {
-  logTranslate("start", { englishPhrase, targetLanguage: targetLanguage || "es" });
+async function handleTranslate(englishPhrase, targetLanguage, captionContext) {
+  logTranslate("start", {
+    englishPhrase,
+    targetLanguage: targetLanguage || "es",
+    contextLines: Array.isArray(captionContext) ? captionContext.length : 0,
+  });
   try {
-    let result = await fetchLessonJsonOnce(englishPhrase, targetLanguage, false);
+    let result = await fetchLessonJsonOnce(englishPhrase, targetLanguage, captionContext, false);
     if (result.error) {
       return result.error;
     }
@@ -154,7 +267,7 @@ async function handleTranslate(englishPhrase, targetLanguage) {
     }
 
     logTranslate("retrying after invalid JSON or shape");
-    result = await fetchLessonJsonOnce(englishPhrase, targetLanguage, true);
+    result = await fetchLessonJsonOnce(englishPhrase, targetLanguage, captionContext, true);
     if (result.error) {
       return result.error;
     }
@@ -173,6 +286,11 @@ async function handleTranslate(englishPhrase, targetLanguage) {
 async function handleTts(text, speed) {
   logTts("start", { textLength: text ? text.length : 0, speed });
   try {
+    const apiKey = await getOpenAiApiKey();
+    if (!apiKey) {
+      return "TTS failed: add your OpenAI API key in the LinguaWatch popup settings.";
+    }
+
     const body = JSON.stringify({
       model: "tts-1",
       voice: "onyx",
@@ -184,7 +302,7 @@ async function handleTts(text, speed) {
     const res = await fetch("https://api.openai.com/v1/audio/speech", {
       method: "POST",
       headers: {
-        Authorization: "Bearer " + OPENAI_API_KEY,
+        Authorization: "Bearer " + apiKey,
         "Content-Type": "application/json",
       },
       body,
@@ -234,9 +352,10 @@ browser.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   if (message.type === "TRANSLATE") {
     const englishPhrase = message.englishPhrase;
     const targetLanguage = message.targetLanguage;
+    const captionContext = message.captionContext;
     (async () => {
       try {
-        const result = await handleTranslate(englishPhrase, targetLanguage);
+        const result = await handleTranslate(englishPhrase, targetLanguage, captionContext);
         sendResponse(result);
       } catch (err) {
         console.error("[LinguaWatch BG TRANSLATE] unhandled", err);
