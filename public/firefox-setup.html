@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>LinguaWatch — Firefox setup (all links)</title>
+    <style>
+      :root {
+        --bg: #0c0a12;
+        --surface: #15101f;
+        --border: rgba(168, 85, 247, 0.25);
+        --text: #f4f4f5;
+        --muted: #a1a1aa;
+        --accent: #a855f7;
+        --accent-dim: rgba(168, 85, 247, 0.2);
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        min-height: 100vh;
+        font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+        background: var(--bg);
+        color: var(--text);
+        line-height: 1.55;
+        padding: 1.5rem 1rem 3rem;
+      }
+      .wrap {
+        max-width: 40rem;
+        margin: 0 auto;
+      }
+      h1 {
+        font-size: 1.35rem;
+        font-weight: 650;
+        margin: 0 0 0.35rem;
+      }
+      .sub {
+        color: var(--muted);
+        font-size: 0.92rem;
+        margin: 0 0 1.5rem;
+      }
+      .card {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 0.85rem;
+        padding: 1rem 1.1rem;
+        margin-bottom: 0.75rem;
+      }
+      .card h2 {
+        margin: 0 0 0.5rem;
+        font-size: 0.78rem;
+        font-weight: 600;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        color: var(--accent);
+      }
+      .card p {
+        margin: 0 0 0.65rem;
+        font-size: 0.94rem;
+        color: var(--muted);
+      }
+      .card p:last-child {
+        margin-bottom: 0;
+      }
+      a.btn {
+        display: inline-block;
+        padding: 0.55rem 0.95rem;
+        border-radius: 0.5rem;
+        font-size: 0.9rem;
+        font-weight: 600;
+        text-decoration: none;
+        margin: 0.25rem 0.5rem 0.25rem 0;
+      }
+      a.btn-primary {
+        background: linear-gradient(135deg, #7c3aed, #a855f7);
+        color: #fff;
+      }
+      a.btn-secondary {
+        background: var(--accent-dim);
+        color: #e9d5ff;
+        border: 1px solid var(--border);
+      }
+      code.block {
+        display: block;
+        font-size: 0.72rem;
+        word-break: break-all;
+        padding: 0.45rem 0.55rem;
+        margin-top: 0.45rem;
+        border-radius: 0.35rem;
+        background: rgba(0, 0, 0, 0.35);
+        border: 1px solid var(--border);
+        color: #e9d5ff;
+      }
+      .home {
+        margin-bottom: 1.25rem;
+      }
+      .home a {
+        color: var(--accent);
+        font-size: 0.9rem;
+      }
+      strong {
+        color: var(--text);
+      }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <div class="home"><a href="./">← LinguaWatch home</a></div>
+
+      <h1>Firefox setup — everything in one place</h1>
+      <p class="sub">Open this page in Firefox. Click each step in order (links use this site automatically).</p>
+
+      <section class="card">
+        <h2>Before you start — requirements</h2>
+        <p>
+          <strong>Firefox desktop</strong> · <strong>YouTube</strong> with <strong>captions on</strong> · an
+          <strong>OpenAI API key</strong> (paste it in the LinguaWatch toolbar popup after install — lessons use OpenAI and are billed to your account).
+        </p>
+        <p style="margin-bottom: 0"><a href="privacy.html">Privacy summary →</a></p>
+      </section>
+
+      <section class="card">
+        <h2>Step 1 — Download a ZIP</h2>
+        <p>Choose one package. Save the file when prompted.</p>
+        <div>
+          <a class="btn btn-primary" id="dl-stable" href="downloads/LinguaWatch-firefox.zip" download>LinguaWatch-firefox.zip</a>
+          <a class="btn btn-secondary" id="dl-friends" href="downloads/LinguaWatch-firefox-test-friends.zip" download
+            >LinguaWatch-firefox-test-friends.zip</a
+          >
+        </div>
+        <p style="margin-top: 0.75rem; margin-bottom: 0.25rem">Direct URLs (copy if needed):</p>
+        <code class="block" id="url-stable"></code>
+        <code class="block" id="url-friends"></code>
+      </section>
+
+      <section class="card">
+        <h2>Step 2 — Unzip</h2>
+        <p>Unzip so you have a folder containing <strong>manifest.json</strong> (same folder as the rest of the extension files).</p>
+      </section>
+
+      <section class="card">
+        <h2>Step 3 — Load in Firefox</h2>
+        <p>Open Firefox’s debugging page for this browser profile:</p>
+        <a class="btn btn-primary" href="about:debugging#/runtime/this-firefox">Open about:debugging (This Firefox)</a>
+        <p style="margin-top: 0.85rem">
+          Click <strong>Load Temporary Add-on…</strong>, then select <strong>manifest.json</strong> inside the folder you extracted.
+        </p>
+      </section>
+
+      <section class="card">
+        <h2>Step 4 — Add your OpenAI API key</h2>
+        <p>
+          Click the <strong>LinguaWatch</strong> icon in the toolbar → paste your <strong>OpenAI API key</strong> → save. Without a key, lessons will not generate.
+        </p>
+        <p style="margin-bottom: 0">
+          Get a key from <a href="https://platform.openai.com/api-keys" target="_blank" rel="noopener noreferrer">OpenAI</a> if you do not have one (normal API pricing applies).
+        </p>
+      </section>
+
+      <section class="card">
+        <h2>Step 5 — Watch on YouTube</h2>
+        <p>Open YouTube and turn <strong>captions</strong> on. Pin the LinguaWatch icon from the puzzle menu if needed.</p>
+        <a class="btn btn-secondary" href="https://www.youtube.com/" target="_blank" rel="noopener noreferrer">Open YouTube</a>
+      </section>
+
+      <section class="card">
+        <h2>Note — temporary install</h2>
+        <p>Temporary add-ons are removed when Firefox fully quits. After that, repeat Step 3 onward.</p>
+      </section>
+
+      <section class="card">
+        <h2>If something goes wrong</h2>
+        <p><strong>Lessons fail or “missing API key”</strong> — Open the popup and confirm your OpenAI key is saved.</p>
+        <p><strong>Extension gone after closing Firefox</strong> — Normal for temporary add-ons. Reload from Step 3.</p>
+        <p><strong>Bad or silly phrases</strong> — Captions drive everything; try another video or a cleaner subtitle track.</p>
+        <p style="margin-bottom: 0"><strong>Download 404</strong> — Confirm this site is deployed and use the copy-paste URLs under Step 1.</p>
+      </section>
+    </div>
+
+    <script>
+      (function () {
+        function absolute(relativePath) {
+          return new URL(relativePath, window.location.href).href;
+        }
+        document.getElementById("url-stable").textContent = absolute("downloads/LinguaWatch-firefox.zip");
+        document.getElementById("url-friends").textContent = absolute("downloads/LinguaWatch-firefox-test-friends.zip");
+      })();
+    </script>
+  </body>
+</html>

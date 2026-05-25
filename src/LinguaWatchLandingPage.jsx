@@ -4,100 +4,226 @@ import "./LinguaWatchLandingPage.css";
 const EXTENSION_DOWNLOAD_URL = `${process.env.PUBLIC_URL || ""}/downloads/LinguaWatch-firefox.zip`;
 const EXTENSION_FILENAME = "LinguaWatch-firefox.zip";
 
+const FRIENDS_TEST_DOWNLOAD_URL = `${process.env.PUBLIC_URL || ""}/downloads/LinguaWatch-firefox-test-friends.zip`;
+const FRIENDS_TEST_FILENAME = "LinguaWatch-firefox-test-friends.zip";
+
+const FIREFOX_SETUP_URL = `${process.env.PUBLIC_URL || ""}/firefox-setup.html`;
+const AUTH_STORAGE_KEY = "linguawatch-auth-session";
+
 const NAV_LINKS = [
   { label: "Product", href: "#product" },
   { label: "How It Works", href: "#how-it-works" },
   { label: "Features", href: "#features" },
   { label: "Why It Works", href: "#why-it-works" },
+  { label: "Expectations", href: "#expectations" },
   { label: "Install", href: "#install" },
   { label: "FAQ", href: "#faq" },
 ];
 
-const TRUST_POINTS = [
-  "Designed for focused learners",
-  "Real-time phrase breakdowns",
-  "Micro-lessons without leaving your video",
-  "Built for immersive study sessions",
+const AT_A_GLANCE = [
+  "Firefox extension — runs on YouTube while you watch",
+  "Press Shift+L anytime to freeze & learn the last caption line",
+  "Reads on-screen captions and picks teachable phrases from the dialogue",
+  "Pauses for a structured lesson: phrase, translation, key words, grammar, quiz",
+  "Saved lessons + this video’s recent lines — review without waiting on the API",
+  "You add your own OpenAI API key — lessons use the API (usage billed by OpenAI)",
 ];
 
 const HOW_IT_WORKS_STEPS = [
   {
-    title: "Watch with captions on",
-    body: "Start any captioned video. LinguaWatch listens quietly in the background for high-value phrases.",
+    title: "Turn on captions on YouTube",
+    body: "Pick any video with subtitles. LinguaWatch follows the caption stream in real time — no separate audio upload.",
     icon: "01",
   },
   {
-    title: "Smart phrase detection",
-    body: "It identifies useful, contextual phrases instead of random single words, keeping lessons relevant to what you are watching.",
+    title: "Watch — or freeze when you hear gold",
+    body: "Lessons appear on a schedule you control, or hit Shift+L to learn the last line the moment it lands.",
     icon: "02",
   },
   {
-    title: "Guided micro-lesson",
-    body: "At the right moment, the video pauses and a structured lesson appears with translation, key vocabulary, and grammar.",
+    title: "Pause → micro-lesson → resume",
+    body: "The player pauses; you get the line, translation, mapped keywords, grammar, and a quick quiz. One click continues playback.",
     icon: "03",
   },
   {
-    title: "Resume with stronger context",
-    body: "Continue watching with better comprehension, reinforced memory, and more confidence in real usage.",
+    title: "Review what you saved",
+    body: "Completed lessons stay on your device. Re-open them from the popup or export CSV — no second app required.",
     icon: "04",
   },
 ];
 
 const FEATURES = [
   {
-    title: "Smart phrase selection",
-    body: "Learns from subtitles and surfaces phrases with practical language value, not noise.",
-    icon: "spark",
-  },
-  {
-    title: "Contextual translations",
-    body: "Explanations are tied to the moment in the video, helping meaning stick faster.",
-    icon: "translate",
-  },
-  {
-    title: "Vocabulary breakdowns",
-    body: "Key words are split into clear pairings so you can absorb useful building blocks.",
-    icon: "chips",
-  },
-  {
-    title: "Grammar in plain English",
-    body: "Concise grammar notes explain what the phrase demonstrates without overwhelming detail.",
-    icon: "grammar",
-  },
-  {
-    title: "Flow-preserving learning",
-    body: "Lessons are timed to teach without derailing your session, then you continue instantly.",
+    title: "Freeze & learn (Shift+L)",
+    body: "Heard something worth keeping? One shortcut starts a lesson from the latest caption line — no waiting for the next scheduled pause.",
     icon: "flow",
   },
   {
-    title: "Personalized pacing",
-    body: "Tune lesson frequency to match your study style, attention span, and session goals.",
+    title: "Phrase-first lessons",
+    body: "Lessons anchor on full lines and expressions from the subtitles, not isolated dictionary lookups.",
+    icon: "spark",
+  },
+  {
+    title: "Same scene, same meaning",
+    body: "Translation and notes reference the exact dialogue you heard, with recent caption context so the lesson stays grounded.",
+    icon: "translate",
+  },
+  {
+    title: "Saved lessons on device",
+    body: "Every completed lesson is stored locally. Review instantly from the popup or re-run a fresh lesson when you want practice.",
+    icon: "chips",
+  },
+  {
+    title: "Grammar without the textbook tone",
+    body: "Short notes explain the pattern the line illustrates — enough to understand, not a lecture.",
+    icon: "grammar",
+  },
+  {
+    title: "Pacing you control",
+    body: "Adjust how often lessons surface, plus manual Shift+L when the video hands you something perfect.",
     icon: "pace",
   },
 ];
 
 const FAQ_ITEMS = [
   {
-    q: "What videos does LinguaWatch work with?",
-    a: "LinguaWatch is designed for YouTube videos that have captions available. Captions provide the phrase context used for each lesson.",
+    q: "What is LinguaWatch, in one sentence?",
+    a: "A Firefox browser extension for YouTube that turns caption lines into occasional pause-and-learn moments: translation, keywords, and a brief grammar note, then you keep watching.",
   },
   {
-    q: "Does it interrupt too often?",
-    a: "No. You can control lesson frequency, and LinguaWatch spaces lessons intelligently so you stay engaged with your video.",
+    q: "What is Shift+L / Freeze & learn?",
+    a: "While watching YouTube with captions on, press Shift+L to start a lesson from the most recent caption line — instantly, without waiting for the next scheduled lesson.",
   },
   {
-    q: "What languages will it support?",
-    a: "Spanish is the first focus. Additional target languages are planned as the core learning experience expands.",
+    q: "Are lessons saved?",
+    a: "Yes. Every completed lesson is stored on your device in the extension popup. Tap to review instantly, or use ↻ to run a fresh lesson. You can also export CSV.",
   },
   {
-    q: "Is it for beginners or intermediate learners?",
-    a: "Both. Beginners gain structured context and vocabulary, while intermediate learners build faster real-world comprehension.",
+    q: "Why add sign in?",
+    a: "Sign in links usage to a learner account so progress, preferences, and future streak/history features can follow you across sessions.",
   },
   {
-    q: "Does it work in real time?",
-    a: "Yes. LinguaWatch continuously monitors active captions and generates lessons from what was just spoken.",
+    q: "Why do I need an OpenAI API key?",
+    a: "Lessons and optional audio are generated through OpenAI’s API. You paste your key in the LinguaWatch toolbar popup so requests run under your OpenAI account and normal API pricing applies. There is no separate LinguaWatch cloud in this beta.",
+  },
+  {
+    q: "Why Firefox only? What about Chrome?",
+    a: "This beta targets Firefox first. Chrome and Edge builds are on the roadmap so installs can eventually be one-click from browser stores.",
+  },
+  {
+    q: "My extension vanished after closing Firefox — is that a bug?",
+    a: "Temporary add-ons (the current ZIP install) are removed when Firefox fully quits. Reload the add-on from about:debugging, or wait for a signed build on Mozilla Add-ons for a persistent install.",
+  },
+  {
+    q: "Will bad auto-captions ruin lessons?",
+    a: "Lessons follow whatever text YouTube’s captions show. Auto-generated captions can be noisy; videos with clean, human-edited subs usually produce better phrases and teaching content.",
+  },
+  {
+    q: "How is this different from dual subtitles or hover-translate tools?",
+    a: "Those tools optimize for reading along or looking up words. LinguaWatch proactively selects phrases and stops the video for a structured mini-lesson when it matters — closer to a tutor interrupting at useful points than a passive subtitle overlay.",
+  },
+  {
+    q: "Where does it work?",
+    a: "YouTube in Firefox, with captions turned on. Other browsers and streaming sites are not supported yet.",
+  },
+  {
+    q: "What videos can I use?",
+    a: "Any YouTube video that has usable captions in the language you’re learning from. The extension uses that caption text as the source for phrases and lessons.",
+  },
+  {
+    q: "Will it nag me every few seconds?",
+    a: "No. You control lesson frequency, and lessons are spaced so you can stay with the story or tutorial you’re watching.",
+  },
+  {
+    q: "Which languages?",
+    a: "Spanish is the first learning focus. More target languages may follow as the product grows.",
+  },
+  {
+    q: "Beginners or advanced?",
+    a: "Both benefit: beginners get structure tied to real speech; advanced learners mine nuance from phrases they already hear in context.",
+  },
+  {
+    q: "Does it run in real time?",
+    a: "Yes. It follows the active caption track as you watch and builds lessons from what was just on screen.",
   },
 ];
+
+function getSavedSession() {
+  try {
+    const raw = localStorage.getItem(AUTH_STORAGE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (!parsed?.email) return null;
+    return parsed;
+  } catch {
+    return null;
+  }
+}
+
+function AuthModal({ isOpen, onClose, onSubmit, errorMessage }) {
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+
+  useEffect(() => {
+    if (!isOpen) {
+      setEmail("");
+      setPassword("");
+    }
+  }, [isOpen]);
+
+  if (!isOpen) return null;
+
+  const handleSubmit = (event) => {
+    event.preventDefault();
+    onSubmit({ email, password });
+  };
+
+  return (
+    <div className="lw-auth-modal-backdrop" role="presentation" onClick={onClose}>
+      <div
+        className="lw-auth-modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="lw-auth-title"
+        onClick={(event) => event.stopPropagation()}
+      >
+        <button type="button" className="lw-auth-close" onClick={onClose} aria-label="Close sign in modal">
+          ×
+        </button>
+        <p className="lw-eyebrow">Account</p>
+        <h2 id="lw-auth-title">Sign in to LinguaWatch</h2>
+        <p className="lw-auth-copy">Use sign in to save your setup and keep your learning flow tied to one account.</p>
+        <form className="lw-auth-form" onSubmit={handleSubmit}>
+          <label htmlFor="lw-email">Email</label>
+          <input
+            id="lw-email"
+            type="email"
+            autoComplete="email"
+            value={email}
+            onChange={(event) => setEmail(event.target.value)}
+            placeholder="you@example.com"
+            required
+          />
+          <label htmlFor="lw-password">Password</label>
+          <input
+            id="lw-password"
+            type="password"
+            autoComplete="current-password"
+            value={password}
+            onChange={(event) => setPassword(event.target.value)}
+            placeholder="At least 8 characters"
+            minLength={8}
+            required
+          />
+          {errorMessage ? <p className="lw-auth-error">{errorMessage}</p> : null}
+          <button type="submit" className="lw-btn lw-btn-primary lw-auth-submit">
+            Sign In
+          </button>
+        </form>
+      </div>
+    </div>
+  );
+}
 
 function Icon({ kind }) {
   const paths = {
@@ -129,10 +255,10 @@ function SectionHeader({ eyebrow, title, description }) {
   );
 }
 
-function TrustPills() {
+function AtAGlancePills() {
   return (
     <div className="lw-trust-grid">
-      {TRUST_POINTS.map((item) => (
+      {AT_A_GLANCE.map((item) => (
         <div key={item} className="lw-trust-pill">
           <span className="lw-dot" />
           <span>{item}</span>
@@ -153,10 +279,10 @@ function HeroVisual() {
         </div>
         <div className="lw-video-body">
           <div className="lw-video-info">
-            <div className="lw-video-overlay-label">Paused for Lesson</div>
+            <div className="lw-video-overlay-label">Shift+L · Freeze &amp; learn</div>
             <div className="lw-example-box">
-              <p className="lw-example-box-label">Example lesson moment</p>
-              <p className="lw-example-box-text">Smart pause + contextual translation + key vocabulary</p>
+              <p className="lw-example-box-label">You choose the moment</p>
+              <p className="lw-example-box-text">Last caption line → instant lesson → saved for review</p>
             </div>
           </div>
           <div className="lw-caption-line">“I’ve been trying to understand this for weeks.”</div>
@@ -187,29 +313,27 @@ function WhySection() {
         <div>
           <SectionHeader
             eyebrow="Why LinguaWatch"
-            title="Language learning that stays inside the content."
-            description="Most language tools force a context switch. LinguaWatch does the opposite."
+            title="Structured lessons from the video itself — not a second screen."
+            description="Many extensions help you read subtitles or look up words. LinguaWatch is built for deliberate lesson moments inside the same watch session."
           />
         </div>
         <div className="lw-why-cards">
           <article>
-            <h3>Most tools pull you away</h3>
+            <h3>Dual subs and popups = reading support</h3>
             <p>
-              Traditional apps separate vocabulary from real media. You memorize in one place and try to apply it in
-              another.
+              Popular tools overlay translations or definitions on demand. That’s great for scanning — but easy to stay passive.
             </p>
           </article>
           <article>
-            <h3>LinguaWatch teaches in context</h3>
+            <h3>LinguaWatch = pause-and-teach moments</h3>
             <p>
-              Lessons are drawn from what you just heard, so meaning, grammar, and usage stay connected to real input.
+              It selects phrases from the caption line you’re living in, then stops briefly to unpack that line as a lesson before you continue.
             </p>
           </article>
           <article>
-            <h3>Passive viewing becomes active learning</h3>
+            <h3>Same habit, harder learning</h3>
             <p>
-              Every session compounds comprehension naturally, without requiring a separate study routine to make
-              progress.
+              You keep your YouTube routine; the extension adds bite-sized comprehension work when the content hands you something worth retaining.
             </p>
           </article>
         </div>
@@ -224,8 +348,8 @@ function ProductPreviewSection() {
       <div className="lw-container">
         <SectionHeader
           eyebrow="Product Preview"
-          title="A sleek learning layer built for immersion."
-          description="A premium, distraction-free interface that pauses at the right moment and gets you back to watching with better understanding."
+          title="What you see during a lesson"
+          description="The panel mirrors a typical session: original line, translation, keyword pairs, a short grammar note, then back to the video."
         />
 
         <div className="lw-preview-shell">
@@ -269,6 +393,59 @@ function ProductPreviewSection() {
   );
 }
 
+function ExpectationsSection() {
+  const privacyHref = `${process.env.PUBLIC_URL || ""}/privacy.html`;
+
+  return (
+    <section className="lw-section lw-expectations" id="expectations">
+      <div className="lw-container">
+        <SectionHeader
+          eyebrow="Before you install"
+          title="Requirements, cost, and privacy — upfront"
+          description="Fewer surprises: what you need for the beta, what we’re fixing next, and how your data moves."
+        />
+        <div className="lw-expectations-grid">
+          <article className="lw-expectation-card">
+            <h3>What you need</h3>
+            <ul className="lw-expect-list">
+              <li>
+                <strong>Firefox</strong> on desktop (today’s install is a developer-style temporary add-on).
+              </li>
+              <li>
+                <strong>YouTube</strong> with <strong>captions on</strong> — lesson content comes from that caption text.
+              </li>
+              <li>
+                <strong>OpenAI API key</strong> in the extension popup. Lessons call OpenAI; usage is billed to your OpenAI account.
+              </li>
+            </ul>
+          </article>
+          <article className="lw-expectation-card">
+            <h3>What we’re improving</h3>
+            <ul className="lw-expect-list">
+              <li>
+                <strong>Signed Mozilla Add-ons</strong> listing so the extension survives browser restarts without reloading the ZIP.
+              </li>
+              <li>
+                <strong>Chrome / Edge</strong> builds on the roadmap to match how most people browse.
+              </li>
+              <li>
+                <strong>Caption quality</strong> will always depend on YouTube — we surface lessons from what’s on screen, good or bad.
+              </li>
+            </ul>
+          </article>
+          <article className="lw-expectation-card lw-expectation-card-span">
+            <h3>Privacy in one line</h3>
+            <p className="lw-expect-lead">
+              Phrases you study are sent to OpenAI to generate lesson text (their policy applies). No separate LinguaWatch backend in this beta — see{" "}
+              <a href={privacyHref}>Privacy</a> for detail.
+            </p>
+          </article>
+        </div>
+      </div>
+    </section>
+  );
+}
+
 function InstallSection() {
   return (
     <section className="lw-section" id="install">
@@ -276,19 +453,33 @@ function InstallSection() {
         <SectionHeader
           eyebrow="Install"
           title="Add LinguaWatch to Firefox"
-          description="Download the extension package, then load it in Firefox in a few steps."
+          description="Distributed as a ZIP for manual install today (temporary add-on). Full Mozilla Add-ons listing can follow once the build is signed."
         />
+        <p className="lw-install-onepage">
+          <a className="lw-btn lw-btn-secondary" href={FIREFOX_SETUP_URL}>
+            All Firefox links on one page
+          </a>
+        </p>
         <div className="lw-install-grid">
           <article className="lw-install-card">
             <h3>1. Download</h3>
             <p>Get the packaged extension (ZIP) from this site.</p>
-            <a
-              className="lw-btn lw-btn-primary lw-install-download"
-              href={EXTENSION_DOWNLOAD_URL}
-              download={EXTENSION_FILENAME}
-            >
-              Download for Firefox
-            </a>
+            <div className="lw-install-download-stack">
+              <a
+                className="lw-btn lw-btn-primary"
+                href={EXTENSION_DOWNLOAD_URL}
+                download={EXTENSION_FILENAME}
+              >
+                Download for Firefox
+              </a>
+              <a
+                className="lw-btn lw-btn-secondary"
+                href={FRIENDS_TEST_DOWNLOAD_URL}
+                download={FRIENDS_TEST_FILENAME}
+              >
+                Friends test build
+              </a>
+            </div>
           </article>
           <article className="lw-install-card">
             <h3>2. Open Firefox debugging</h3>
@@ -304,9 +495,9 @@ function InstallSection() {
             </p>
           </article>
           <article className="lw-install-card">
-            <h3>4. Open YouTube</h3>
+            <h3>4. Key + YouTube</h3>
             <p>
-              Visit YouTube with captions on. Use the LinguaWatch toolbar icon to adjust settings and start a session.
+              Open the LinguaWatch toolbar popup and save your <strong>OpenAI API key</strong> (required for lessons). Then visit YouTube with captions on and start from the toolbar icon.
             </p>
             <a className="lw-btn lw-btn-secondary lw-install-yt" href="https://www.youtube.com/" target="_blank" rel="noreferrer">
               Open YouTube
@@ -317,6 +508,26 @@ function InstallSection() {
           Temporary add-ons reset when Firefox closes. For a permanent install, publish to Mozilla Add-ons or install a signed{" "}
           <code className="lw-code">.xpi</code>.
         </p>
+
+        <div className="lw-install-troubleshoot">
+          <h3 className="lw-install-troubleshoot-title">If something goes wrong</h3>
+          <ul className="lw-install-troubleshoot-list">
+            <li>
+              <strong>“Missing OpenAI API key” or lessons won’t load</strong> — Click the LinguaWatch icon → paste your OpenAI API key → save, then try again on a captioned video.
+            </li>
+            <li>
+              <strong>Extension disappeared after quitting Firefox</strong> — Expected with temporary add-ons. Re-open{" "}
+              <code className="lw-code">about:debugging#/runtime/this-firefox</code> and load <code className="lw-code">manifest.json</code> again.
+            </li>
+            <li>
+              <strong>ZIP download fails or 404</strong> — Confirm you’re on the latest deploy of this site; hard-refresh or try the copy-paste URLs on{" "}
+              <a href={FIREFOX_SETUP_URL}>the setup page</a>.
+            </li>
+            <li>
+              <strong>Weird phrases from bad captions</strong> — Try another video or turn on a higher-quality subtitle track if the video offers one.
+            </li>
+          </ul>
+        </div>
       </div>
     </section>
   );
@@ -331,7 +542,7 @@ function FAQSection() {
         <SectionHeader
           eyebrow="FAQ"
           title="Common questions"
-          description="Clear answers before you install."
+          description="Scope, platforms, and how LinguaWatch differs from subtitle tools."
         />
         <div className="lw-faq-list">
           {FAQ_ITEMS.map((item, idx) => {
@@ -361,6 +572,9 @@ function FAQSection() {
 
 export default function LinguaWatchLandingPage() {
   const [scrolled, setScrolled] = useState(false);
+  const [authModalOpen, setAuthModalOpen] = useState(false);
+  const [authError, setAuthError] = useState("");
+  const [session, setSession] = useState(() => getSavedSession());
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 12);
@@ -370,6 +584,44 @@ export default function LinguaWatchLandingPage() {
   }, []);
 
   const year = useMemo(() => new Date().getFullYear(), []);
+  const signedInLabel = session?.email || "Signed in";
+
+  const openSignIn = () => {
+    setAuthError("");
+    setAuthModalOpen(true);
+  };
+
+  const closeSignIn = () => {
+    setAuthError("");
+    setAuthModalOpen(false);
+  };
+
+  const handleSignIn = ({ email, password }) => {
+    const normalizedEmail = email.trim().toLowerCase();
+    if (!normalizedEmail || !normalizedEmail.includes("@")) {
+      setAuthError("Enter a valid email address.");
+      return;
+    }
+    if (password.length < 8) {
+      setAuthError("Password must be at least 8 characters.");
+      return;
+    }
+
+    const nextSession = {
+      email: normalizedEmail,
+      signedInAt: new Date().toISOString(),
+    };
+
+    localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(nextSession));
+    setSession(nextSession);
+    setAuthModalOpen(false);
+    setAuthError("");
+  };
+
+  const handleSignOut = () => {
+    localStorage.removeItem(AUTH_STORAGE_KEY);
+    setSession(null);
+  };
 
   return (
     <div className="lw-page" id="top">
@@ -389,9 +641,23 @@ export default function LinguaWatchLandingPage() {
               </a>
             ))}
           </nav>
-          <a className="lw-btn lw-btn-primary" href={EXTENSION_DOWNLOAD_URL} download={EXTENSION_FILENAME}>
-            Install Extension
-          </a>
+          <div className="lw-nav-actions">
+            {session ? (
+              <>
+                <span className="lw-session-pill">{signedInLabel}</span>
+                <button type="button" className="lw-btn lw-btn-secondary" onClick={handleSignOut}>
+                  Sign Out
+                </button>
+              </>
+            ) : (
+              <button type="button" className="lw-btn lw-btn-secondary" onClick={openSignIn}>
+                Sign In
+              </button>
+            )}
+            <a className="lw-btn lw-btn-primary" href={EXTENSION_DOWNLOAD_URL} download={EXTENSION_FILENAME}>
+              Install Extension
+            </a>
+          </div>
         </div>
       </header>
 
@@ -399,13 +665,23 @@ export default function LinguaWatchLandingPage() {
         <section className="lw-hero">
           <div className="lw-container lw-hero-grid">
             <div className="lw-hero-copy">
-              <p className="lw-eyebrow">AI-powered language immersion</p>
-              <h1>Turn videos into structured language lessons.</h1>
+              <p className="lw-eyebrow">Firefox extension · YouTube · Freeze &amp; learn</p>
+              <h1>Heard something good? Hit Shift+L — learn that line.</h1>
               <p className="lw-hero-support">
-                LinguaWatch transforms passive watching into active learning with intelligent micro-lessons built from
-                the exact phrases you just heard.
+                LinguaWatch is a Firefox tutor for YouTube: it reads captions, pauses for structured mini-lessons
+                (translation, keywords, grammar, quiz), saves what you learned, and lets you resume the show. Built
+                for Spanish-first immersion.
               </p>
               <div className="lw-hero-ctas">
+                {session ? (
+                  <button type="button" className="lw-btn lw-btn-secondary">
+                    Signed in as {signedInLabel}
+                  </button>
+                ) : (
+                  <button type="button" className="lw-btn lw-btn-secondary" onClick={openSignIn}>
+                    Sign In to Save Progress
+                  </button>
+                )}
                 <a href={EXTENSION_DOWNLOAD_URL} download={EXTENSION_FILENAME} className="lw-btn lw-btn-primary">
                   Install Extension
                 </a>
@@ -415,8 +691,12 @@ export default function LinguaWatchLandingPage() {
               </div>
               <div className="lw-trust-line">
                 <span className="lw-dot" />
-                Built for immersive self-learning and YouTube-based language sessions
+                Not dual subtitles — a tutor that pauses the show and remembers your phrases
               </div>
+              <p className="lw-hero-note">
+                Beta: Firefox desktop · YouTube + captions · bring your OpenAI API key (
+                <a href="#expectations">details</a>)
+              </p>
             </div>
             <HeroVisual />
           </div>
@@ -425,11 +705,11 @@ export default function LinguaWatchLandingPage() {
         <section className="lw-section lw-social-proof">
           <div className="lw-container">
             <SectionHeader
-              eyebrow="Trusted Experience"
-              title="Purpose-built for focused learners"
-              description="Structured, contextual, and designed to keep momentum while you watch."
+              eyebrow="What it is"
+              title="A YouTube learning layer for Firefox"
+              description="Plain facts — so you know exactly what you’re installing."
             />
-            <TrustPills />
+            <AtAGlancePills />
           </div>
         </section>
 
@@ -437,8 +717,8 @@ export default function LinguaWatchLandingPage() {
           <div className="lw-container">
             <SectionHeader
               eyebrow="How It Works"
-              title="A clear four-step learning loop"
-              description="Simple in flow, rigorous in outcomes."
+              title="From captions to lesson in four steps"
+              description="Everything happens on the video page — no separate course or flashcard deck required."
             />
             <div className="lw-steps-grid">
               {HOW_IT_WORKS_STEPS.map((step) => (
@@ -456,8 +736,8 @@ export default function LinguaWatchLandingPage() {
           <div className="lw-container">
             <SectionHeader
               eyebrow="Features"
-              title="Everything needed for contextual progress"
-              description="Premium lesson quality with minimal friction."
+              title="What each lesson includes"
+              description="Each interruption is small on purpose: enough structure to learn, not enough to replace the video."
             />
             <div className="lw-feature-grid">
               {FEATURES.map((feature) => (
@@ -475,6 +755,7 @@ export default function LinguaWatchLandingPage() {
 
         <WhySection />
         <ProductPreviewSection />
+        <ExpectationsSection />
         <InstallSection />
         <FAQSection />
 
@@ -482,10 +763,9 @@ export default function LinguaWatchLandingPage() {
           <div className="lw-container">
             <div className="lw-final-cta-card">
               <p className="lw-eyebrow">Start now</p>
-              <h2>Turn your next video into a language lesson.</h2>
+              <h2>Learn from the next video you press play on.</h2>
               <p>
-                Install LinguaWatch and make every caption count with structured micro-learning built directly into your
-                watch flow.
+                Install the Firefox extension, open a captioned YouTube video, and let LinguaWatch turn standout lines into short lessons without leaving the tab.
               </p>
               <div className="lw-final-cta-row">
                 <a href={EXTENSION_DOWNLOAD_URL} download={EXTENSION_FILENAME} className="lw-btn lw-btn-primary">
@@ -508,7 +788,7 @@ export default function LinguaWatchLandingPage() {
               <span>LinguaWatch</span>
             </a>
             <p className="lw-footer-copy">
-              LinguaWatch turns real video moments into structured language comprehension.
+              Firefox extension for YouTube: caption-driven phrase lessons with translation, keywords, and grammar — on your watch, on your pace.
             </p>
           </div>
           <div className="lw-footer-links">
@@ -525,6 +805,8 @@ export default function LinguaWatchLandingPage() {
           </div>
         </div>
       </footer>
+
+      <AuthModal isOpen={authModalOpen} onClose={closeSignIn} onSubmit={handleSignIn} errorMessage={authError} />
     </div>
   );
 }
