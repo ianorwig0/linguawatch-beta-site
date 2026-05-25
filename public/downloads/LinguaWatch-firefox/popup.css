@@ -371,3 +371,56 @@ body {
   color: #fca5a5;
   border-color: rgba(239, 68, 68, 0.35);
 }
+
+.lw-snooze-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 8px 0 6px;
+}
+
+.lw-snooze-btn {
+  appearance: none;
+  border: 1px solid rgba(168, 85, 247, 0.4);
+  background: rgba(124, 58, 237, 0.12);
+  color: #e9d5ff;
+  border-radius: 999px;
+  padding: 6px 12px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease,
+    color 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+.lw-snooze-btn:hover {
+  background: rgba(124, 58, 237, 0.22);
+  border-color: rgba(168, 85, 247, 0.65);
+}
+
+.lw-snooze-btn.is-active {
+  background: linear-gradient(135deg, #7c3aed 0%, #a855f7 100%);
+  border-color: rgba(168, 85, 247, 0.85);
+  color: #ffffff;
+  box-shadow: 0 6px 18px rgba(124, 58, 237, 0.45);
+}
+
+.lw-snooze-btn.lw-snooze-off {
+  border-color: rgba(255, 255, 255, 0.18);
+  background: transparent;
+  color: #cbd5e1;
+}
+
+.lw-snooze-btn.lw-snooze-off:hover {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.lw-snooze-btn.lw-snooze-off.is-active {
+  background: rgba(255, 255, 255, 0.12);
+  color: #f8fafc;
+  border-color: rgba(255, 255, 255, 0.35);
+  box-shadow: none;
+}

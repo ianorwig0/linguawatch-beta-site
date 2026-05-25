@@ -6,7 +6,10 @@ const DEFAULTS = {
   lessonFrequencyMinutes: 8,
   targetLanguage: "es",
   openaiApiKey: "",
+  snoozeUntil: 0,
 };
+
+let snoozeRefreshTimerId = null;
 
 let currentTabHostname = "";
 let currentTabId = null;
@@ -45,6 +48,84 @@ function isYouTubeUrl(url) {
   } catch (e) {
     return false;
   }
+}
+
+function formatSnoozeRemaining(ms) {
+  const totalMin = Math.ceil(ms / 60000);
+  if (totalMin <= 1) return "less than a minute";
+  if (totalMin < 60) return totalMin + " min";
+  const hr = Math.floor(totalMin / 60);
+  const rem = totalMin % 60;
+  if (rem === 0) return hr + " hr";
+  return hr + " hr " + rem + " min";
+}
+
+function renderSnoozeUi(snoozeUntilValue) {
+  const status = document.getElementById("lw-snooze-status");
+  const row = document.getElementById("lw-snooze-row");
+  const until = Number(snoozeUntilValue) || 0;
+  const remaining = until - Date.now();
+  const active = remaining > 0;
+
+  if (status) {
+    status.textContent = active
+      ? "Snoozed for " + formatSnoozeRemaining(remaining) + " more."
+      : "Auto-lessons run on schedule.";
+  }
+
+  if (row) {
+    const buttons = row.querySelectorAll(".lw-snooze-btn");
+    for (let i = 0; i < buttons.length; i++) {
+      const btn = buttons[i];
+      const min = Number(btn.getAttribute("data-snooze-min")) || 0;
+      btn.classList.remove("is-active");
+      if (active && min > 0 && Math.abs(min - Math.round(remaining / 60000)) <= 1) {
+        btn.classList.add("is-active");
+      }
+      if (!active && min === 0) btn.classList.add("is-active");
+    }
+  }
+
+  if (snoozeRefreshTimerId !== null) {
+    clearTimeout(snoozeRefreshTimerId);
+    snoozeRefreshTimerId = null;
+  }
+  if (active) {
+    snoozeRefreshTimerId = window.setTimeout(function () {
+      renderSnoozeUi(until);
+    }, Math.min(60000, Math.max(1000, remaining)));
+  }
+}
+
+async function applySnooze(minutes) {
+  const msg = document.getElementById("lw-save-msg");
+  const snoozeUntil = minutes > 0 ? Date.now() + minutes * 60 * 1000 : 0;
+  try {
+    await browser.storage.sync.set({ snoozeUntil });
+    renderSnoozeUi(snoozeUntil);
+    if (msg) {
+      msg.textContent = snoozeUntil
+        ? "Auto-lessons snoozed for " + formatSnoozeRemaining(snoozeUntil - Date.now()) + "."
+        : "Snooze cleared.";
+      msg.classList.remove("lw-error");
+    }
+  } catch (e) {
+    if (msg) {
+      msg.textContent = "Snooze failed: " + (e && e.message ? e.message : String(e));
+      msg.classList.add("lw-error");
+    }
+  }
+}
+
+function wireSnoozeButtons() {
+  const row = document.getElementById("lw-snooze-row");
+  if (!row) return;
+  row.addEventListener("click", function (event) {
+    const target = event.target;
+    if (!target || !target.classList || !target.classList.contains("lw-snooze-btn")) return;
+    const min = parseInt(target.getAttribute("data-snooze-min"), 10);
+    applySnooze(Number.isFinite(min) ? min : 0);
+  });
 }
 
 function updateUiFromData(data, tab) {
@@ -87,14 +168,22 @@ function updateUiFromData(data, tab) {
   if (freqVal) freqVal.textContent = String(n);
   if (apiKeyInput) apiKeyInput.value = data.openaiApiKey || "";
 
+  renderSnoozeUi(data.snoozeUntil);
+
   const activeLesson =
     globalOn &&
     onYouTube &&
     currentTabHostname &&
     disabled.indexOf(currentTabHostname) === -1;
+  const snoozeRemaining = (Number(data.snoozeUntil) || 0) - Date.now();
+  const isSnoozed = snoozeRemaining > 0;
   if (activeLesson) {
     if (data.openaiApiKey && String(data.openaiApiKey).trim()) {
-      setStatus(true, "Active on this page — lessons will appear while you watch.");
+      if (isSnoozed) {
+        setStatus(false, "Snoozed — auto-lessons paused for " + formatSnoozeRemaining(snoozeRemaining) + ". Shift+L still works.");
+      } else {
+        setStatus(true, "Active on this page — lessons will appear while you watch.");
+      }
     } else {
       setStatus(false, "Add your OpenAI API key to start lessons.");
     }
@@ -579,6 +668,7 @@ async function clearSavedLessons() {
 
 function boot() {
   load();
+  wireSnoozeButtons();
   const saveBtn = document.getElementById("lw-save");
   if (saveBtn) {
     saveBtn.addEventListener("click", save);
