@@ -235,6 +235,21 @@
   box-shadow: 0 0 0 1px rgba(251, 146, 60, 0.35);
 }
 
+#lw-overlay .lw-chip-now {
+  border-color: #fdba74;
+  background: rgba(249, 115, 22, 0.55);
+  color: #fff7ed;
+  font-weight: 700;
+  box-shadow:
+    0 0 0 2px rgba(251, 146, 60, 0.65),
+    0 0 20px rgba(251, 146, 60, 0.45);
+  transform: scale(1.05);
+  transition:
+    transform 0.18s ease,
+    box-shadow 0.18s ease,
+    background 0.18s ease;
+}
+
 #lw-overlay .lw-grammar,
 #lw-overlay .lw-example-block {
   color: #e2e8f0;

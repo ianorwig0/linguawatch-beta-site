@@ -11,9 +11,11 @@ const MAX_SAVED_LESSONS = 60;
 const SESSION_PHRASE_SYNC_MS = 2500;
 const REPLAY_SEEK_BACK_SEC = 4;
 const REPLAY_PLAY_MS = 4500;
-const TTS_SPEED_EN = 1.05;
-const TTS_SPEED_ES = 1.0;
-const TTS_GAP_MS = 180;
+const TTS_SPEED_EN = 0.95;
+const TTS_SPEED_ES = 0.9;
+const TTS_GAP_MS = 450;
+const TTS_WORD_SPEED_ES = 0.8;
+const TTS_WORD_GAP_MS = 250;
 const TTS_VOICE_EN = "onyx";
 const TTS_VOICE_ES = "nova";
 
@@ -57,6 +59,7 @@ let currentSettings = {
   disabledHosts: [],
   lessonFrequencyMinutes: DEFAULT_LESSON_FREQUENCY_MINUTES,
   targetLanguage: "es",
+  snoozeUntil: 0,
 };
 
 function countWords(s) {
@@ -376,16 +379,24 @@ async function loadSettings() {
       disabledHosts: [],
       lessonFrequencyMinutes: DEFAULT_LESSON_FREQUENCY_MINUTES,
       targetLanguage: "es",
+      snoozeUntil: 0,
     });
+    const snoozeRaw = Number(s.snoozeUntil);
     currentSettings = {
       globalEnabled: s.globalEnabled !== false,
       disabledHosts: Array.isArray(s.disabledHosts) ? s.disabledHosts : [],
       lessonFrequencyMinutes: Math.max(5, Math.min(15, Number(s.lessonFrequencyMinutes) || DEFAULT_LESSON_FREQUENCY_MINUTES)),
       targetLanguage: typeof s.targetLanguage === "string" && s.targetLanguage ? s.targetLanguage : "es",
+      snoozeUntil: Number.isFinite(snoozeRaw) && snoozeRaw > 0 ? snoozeRaw : 0,
     };
   } catch (e) {
     console.error("[LinguaWatch] loadSettings", e);
   }
+}
+
+function isAutoLessonSnoozed() {
+  const until = Number(currentSettings.snoozeUntil) || 0;
+  return until > Date.now();
 }
 
 function isActiveOnThisPage() {
@@ -416,12 +427,22 @@ function scheduleNextLesson() {
   clearLessonTimer();
   if (!isActiveOnThisPage()) return;
 
-  const range = getLessonDelayRangeMs();
-  const span = range.maxMs - range.minMs;
-  const delay = range.minMs + Math.random() * span;
+  let delay;
+  if (isAutoLessonSnoozed()) {
+    const until = Number(currentSettings.snoozeUntil) || 0;
+    delay = Math.max(1000, until - Date.now() + 500);
+  } else {
+    const range = getLessonDelayRangeMs();
+    const span = range.maxMs - range.minMs;
+    delay = range.minMs + Math.random() * span;
+  }
 
   lessonTimerId = window.setTimeout(function () {
     lessonTimerId = null;
+    if (isAutoLessonSnoozed()) {
+      scheduleNextLesson();
+      return;
+    }
     triggerLesson();
   }, delay);
 }
@@ -937,6 +958,31 @@ function revealAllLessonSteps() {
   for (let i = 0; i < chips.length; i++) chips[i].classList.remove("lw-hidden");
 }
 
+/** Walk through the breakdown chips, highlighting each one and speaking the
+ *  Spanish word slowly for pronunciation practice. */
+async function speakBreakdownWords(wordBreakdown, cancelRef) {
+  const root = document.getElementById("lw-overlay");
+  if (!root) return;
+  const chips = Array.prototype.slice.call(root.querySelectorAll("#lw-chips .lw-chip"));
+  const list = Array.isArray(wordBreakdown) ? wordBreakdown : [];
+  const limit = Math.min(list.length, chips.length);
+  for (let i = 0; i < limit; i++) {
+    if (cancelRef && cancelRef.cancelled) return;
+    const row = list[i] || {};
+    const spanish = String(row.spanish || "").trim();
+    if (!spanish) continue;
+    const chip = chips[i];
+    if (chip) chip.classList.add("lw-chip-now");
+    try {
+      await speakText(spanish, TTS_WORD_SPEED_ES, cancelRef, TTS_VOICE_ES);
+    } finally {
+      if (chip) chip.classList.remove("lw-chip-now");
+    }
+    if (cancelRef && cancelRef.cancelled) return;
+    if (!(await waitMs(TTS_WORD_GAP_MS, cancelRef))) return;
+  }
+}
+
 function lwOverlayHeaderHtml() {
   return (
     '<header id="lw-header">' +
@@ -1151,6 +1197,12 @@ async function runLessonFlow(data, cancelRef, prefetched) {
     cancelRef,
     TTS_VOICE_ES
   );
+  if (cancelRef && cancelRef.cancelled) return;
+  if (!(await waitMs(TTS_GAP_MS, cancelRef))) return;
+
+  // Teacher: sound out each Spanish word slowly with chip highlight,
+  // for pronunciation practice.
+  await speakBreakdownWords(data.wordBreakdown, cancelRef);
   if (cancelRef && cancelRef.cancelled) return;
 
   // Micro challenge — question is already on screen; user reads it.
