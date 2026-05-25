@@ -3,6 +3,11 @@
   "name": "LinguaWatch",
   "version": "1.0.0",
   "description": "Learn Spanish while watching YouTube",
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "linguawatch@local.test"
+    }
+  },
   "icons": {
     "48": "icons/icon-48.png",
     "96": "icons/icon-96.png"
@@ -10,6 +15,7 @@
   "permissions": [
     "activeTab",
     "storage",
+    "downloads",
     "https://api.openai.com/",
     "https://www.youtube.com/",
     "https://m.youtube.com/",
