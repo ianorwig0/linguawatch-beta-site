@@ -394,50 +394,190 @@ function renderPhraseList(container, phrases, options) {
   }
 }
 
+function escHtml(str) {
+  return String(str == null ? "" : str)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
+/** Send a TTS replay request to the active YouTube tab. Fire-and-forget. */
+function speakInTab(text, voice) {
+  if (!text) return;
+  browser.tabs
+    .query({ active: true, currentWindow: true })
+    .then(function (tabs) {
+      const tab = tabs && tabs[0];
+      if (!tab || !tab.id) return;
+      return browser.tabs.sendMessage(tab.id, { type: "LW_SPEAK", text: text, voice: voice });
+    })
+    .catch(function () {
+      /* content script may not be loaded on non-YT tabs — silent */
+    });
+}
+
+function getPrevDay(dateStr) {
+  const d = new Date(dateStr + "T12:00:00");
+  d.setDate(d.getDate() - 1);
+  return d.toLocaleDateString("en-CA");
+}
+
+/** Compute the user's current streak from a list of ISO calendar dates. */
+function computeStreak(dailyLessonDates) {
+  if (!Array.isArray(dailyLessonDates) || !dailyLessonDates.length) return 0;
+  const today = new Date().toLocaleDateString("en-CA");
+  const sorted = Array.from(new Set(dailyLessonDates)).sort().reverse();
+  if (sorted[0] !== today && sorted[0] !== getPrevDay(today)) return 0;
+  let streak = 0;
+  let cursor = sorted[0];
+  for (let i = 0; i < sorted.length; i++) {
+    if (sorted[i] === cursor) {
+      streak++;
+      cursor = getPrevDay(cursor);
+    } else if (sorted[i] < cursor) {
+      break;
+    }
+  }
+  return streak;
+}
+
+/** Render a 35-day heatmap grid. Returns an HTML string. */
+function buildStreakCalendar(dailyLessonDates) {
+  const dateSet = new Set(Array.isArray(dailyLessonDates) ? dailyLessonDates : []);
+  const todayDate = new Date();
+  const todayStr = todayDate.toLocaleDateString("en-CA");
+  const days = [];
+  for (let i = 34; i >= 0; i--) {
+    const d = new Date(todayDate);
+    d.setDate(todayDate.getDate() - i);
+    days.push(d.toLocaleDateString("en-CA"));
+  }
+
+  const DOW_LABELS = ["S", "M", "T", "W", "T", "F", "S"];
+  let html = '<div class="lw-cal-grid">';
+  for (let i = 0; i < DOW_LABELS.length; i++) {
+    html += '<span class="lw-cal-dow">' + DOW_LABELS[i] + "</span>";
+  }
+  const firstDow = new Date(days[0] + "T12:00:00").getDay();
+  for (let i = 0; i < firstDow; i++) {
+    html += '<span class="lw-cal-day lw-cal-empty"></span>';
+  }
+  for (let i = 0; i < days.length; i++) {
+    const d = days[i];
+    const active = dateSet.has(d) ? " lw-cal-active" : "";
+    const isToday = d === todayStr ? " lw-cal-today" : "";
+    html += '<span class="lw-cal-day' + active + isToday + '" title="' + d + '"></span>';
+  }
+  html += "</div>";
+  return html;
+}
+
+function buildFilterChips(saved) {
+  const container = document.getElementById("lw-filter-chips");
+  if (!container) return;
+  container.innerHTML = "";
+
+  const allChip = document.createElement("button");
+  allChip.type = "button";
+  allChip.className = "lw-chip lw-chip-active";
+  allChip.textContent = "All";
+  allChip.addEventListener("click", function () {
+    container.querySelectorAll(".lw-chip").forEach(function (c) {
+      c.classList.remove("lw-chip-active");
+    });
+    allChip.classList.add("lw-chip-active");
+    renderSavedLessons(document.getElementById("lw-saved-lessons"), saved);
+  });
+  container.appendChild(allChip);
+
+  const seen = new Map();
+  for (let i = 0; i < saved.length; i++) {
+    const l = saved[i];
+    if (!l || !l.videoUrl) continue;
+    if (!seen.has(l.videoUrl)) seen.set(l.videoUrl, l.videoTitle || l.videoUrl);
+    if (seen.size >= 6) break;
+  }
+
+  seen.forEach(function (title, url) {
+    const chip = document.createElement("button");
+    chip.type = "button";
+    chip.className = "lw-chip";
+    chip.dataset.url = url;
+    chip.textContent = truncateText(title, 22);
+    chip.title = title;
+    chip.addEventListener("click", function () {
+      container.querySelectorAll(".lw-chip").forEach(function (c) {
+        c.classList.remove("lw-chip-active");
+      });
+      chip.classList.add("lw-chip-active");
+      renderSavedLessons(document.getElementById("lw-saved-lessons"), saved);
+    });
+    container.appendChild(chip);
+  });
+}
+
 function renderSavedLessons(container, lessons) {
   if (!container) return;
   container.innerHTML = "";
   const list = Array.isArray(lessons) ? lessons : [];
   if (!list.length) {
-    const empty = document.createElement("p");
-    empty.className = "lw-phrase-empty";
-    empty.textContent = "Complete a lesson to save it here.";
-    container.appendChild(empty);
+    container.innerHTML =
+      '<li class="lw-empty-state">No lessons saved yet.<br>Watch a Spanish video to start.</li>';
     return;
   }
 
-  for (let i = 0; i < Math.min(list.length, 12); i++) {
-    const item = list[i];
+  const activeChip = document.querySelector(".lw-chip.lw-chip-active");
+  const filterUrl = activeChip ? activeChip.dataset.url : null;
+  const filtered = filterUrl ? list.filter(function (r) { return r.videoUrl === filterUrl; }) : list;
+  const display = filtered.slice(0, 40);
+
+  for (let i = 0; i < display.length; i++) {
+    const item = display[i];
     if (!item) continue;
+
+    const esPhrase = item.translation || "";
+    const enPhrase = item.englishPhrase || "";
+    const focusEs = item.focusWord ? item.focusWord.spanish || "" : "";
+    const focusEn = item.focusWord ? item.focusWord.english || "" : "";
+
     const li = document.createElement("li");
     li.className = "lw-saved-row";
+    li.innerHTML =
+      '<div class="lw-row-main">' +
+      '<button type="button" class="lw-row-btn">' +
+      '<span class="lw-row-es">' + escHtml(esPhrase) + "</span>" +
+      '<span class="lw-row-en">' + escHtml(enPhrase) + "</span>" +
+      (focusEs
+        ? '<span class="lw-row-chip">' + escHtml(focusEs) + " · " + escHtml(focusEn) + "</span>"
+        : "") +
+      "</button>" +
+      "</div>" +
+      '<div class="lw-row-actions">' +
+      '<button type="button" class="lw-btn-icon lw-row-tts" title="Play Spanish TTS" aria-label="Play Spanish TTS">🔊</button>' +
+      '<button type="button" class="lw-btn-icon lw-row-relearn" title="Fresh lesson (uses API)" aria-label="Re-learn phrase">↻</button>' +
+      "</div>";
 
-    const reviewBtn = document.createElement("button");
-    reviewBtn.type = "button";
-    reviewBtn.className = "lw-phrase-btn lw-phrase-btn-grow";
-    const focus = item.focusWord && item.focusWord.spanish ? item.focusWord.spanish + " — " : "";
-    reviewBtn.textContent = truncateText(focus + item.englishPhrase, 80);
-    const small = document.createElement("small");
-    small.textContent = truncateText(item.translation || item.videoTitle || "", 72);
-    reviewBtn.appendChild(small);
-    reviewBtn.addEventListener("click", function () {
+    li.querySelector(".lw-row-btn").addEventListener("click", function () {
       quickReviewOnTab(item);
     });
-
-    const relearnBtn = document.createElement("button");
-    relearnBtn.type = "button";
-    relearnBtn.className = "lw-btn-icon";
-    relearnBtn.title = "Re-learn (new lesson)";
-    relearnBtn.setAttribute("aria-label", "Re-learn phrase");
-    relearnBtn.textContent = "↻";
-    relearnBtn.addEventListener("click", function (event) {
+    li.querySelector(".lw-row-tts").addEventListener("click", function (event) {
+      event.stopPropagation();
+      speakInTab(item.translation, "nova");
+    });
+    li.querySelector(".lw-row-relearn").addEventListener("click", function (event) {
       event.stopPropagation();
       triggerPhraseOnTab(item.englishPhrase, item.videoTime);
     });
 
-    li.appendChild(reviewBtn);
-    li.appendChild(relearnBtn);
     container.appendChild(li);
+  }
+
+  if (filtered.length > 40) {
+    const more = document.createElement("li");
+    more.className = "lw-more-hint";
+    more.textContent = "+" + (filtered.length - 40) + " more — export CSV to see all";
+    container.appendChild(more);
   }
 }
 
@@ -538,13 +678,20 @@ async function refreshLibraryPanels(tab) {
     }
   }
 
-  let localData = { sessionPhrases: [], sessionVideoTitle: "", sessionVideoUrl: "", savedLessons: [] };
+  let localData = {
+    sessionPhrases: [],
+    sessionVideoTitle: "",
+    sessionVideoUrl: "",
+    savedLessons: [],
+    dailyLessonDates: [],
+  };
   try {
     localData = await browser.storage.local.get({
       sessionPhrases: [],
       sessionVideoTitle: "",
       sessionVideoUrl: "",
       savedLessons: [],
+      dailyLessonDates: [],
     });
   } catch (e) {
     console.error("[LinguaWatch popup] local storage", e);
@@ -581,8 +728,37 @@ async function refreshLibraryPanels(tab) {
   });
 
   const saved = Array.isArray(localData.savedLessons) ? localData.savedLessons : [];
+  const dates = Array.isArray(localData.dailyLessonDates) ? localData.dailyLessonDates : [];
+
+  const wordCountEl = document.getElementById("lw-stat-words");
+  const videoCountEl = document.getElementById("lw-stat-videos");
+  const streakCountEl = document.getElementById("lw-stat-streak");
+  const calContainer = document.getElementById("lw-streak-calendar");
+
+  const allWords = new Set();
+  for (let i = 0; i < saved.length; i++) {
+    const phrase = (saved[i] && saved[i].translation) || "";
+    const cleaned = phrase.toLowerCase().replace(/[^a-záéíóúüñ ]/gi, "");
+    const parts = cleaned.split(" ");
+    for (let j = 0; j < parts.length; j++) {
+      if (parts[j].length > 2) allWords.add(parts[j]);
+    }
+  }
+  const uniqueVideos = new Set();
+  for (let i = 0; i < saved.length; i++) {
+    if (saved[i] && saved[i].videoUrl) uniqueVideos.add(saved[i].videoUrl);
+  }
+  const streak = computeStreak(dates);
+
+  if (wordCountEl) wordCountEl.textContent = String(allWords.size);
+  if (videoCountEl) videoCountEl.textContent = String(uniqueVideos.size);
+  if (streakCountEl) streakCountEl.textContent = streak > 0 ? "🔥 " + streak : "–";
   if (savedCount) savedCount.textContent = String(saved.length);
+
+  buildFilterChips(saved);
   renderSavedLessons(savedList, saved);
+
+  if (calContainer) calContainer.innerHTML = buildStreakCalendar(dates);
 }
 
 function lessonsToCsv(lessons) {
@@ -677,6 +853,15 @@ function boot() {
   if (exportBtn) exportBtn.addEventListener("click", exportSavedCsv);
   const clearBtn = document.getElementById("lw-clear-saved");
   if (clearBtn) clearBtn.addEventListener("click", clearSavedLessons);
+
+  const streakToggle = document.getElementById("lw-stat-streak");
+  const streakCal = document.getElementById("lw-streak-calendar");
+  if (streakToggle && streakCal) {
+    streakToggle.addEventListener("click", function () {
+      const hidden = streakCal.style.display === "none" || !streakCal.style.display;
+      streakCal.style.display = hidden ? "block" : "none";
+    });
+  }
 }
 
 if (document.readyState === "loading") {

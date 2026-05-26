@@ -109,12 +109,34 @@
       </section>
 
       <section class="lw-section">
-        <div class="lw-section-head">
+        <div class="lw-stats-bar">
+          <div class="lw-stat">
+            <span class="lw-stat-num" id="lw-stat-words">0</span>
+            <span class="lw-stat-label">words</span>
+          </div>
+          <div class="lw-stat">
+            <span class="lw-stat-num" id="lw-stat-videos">0</span>
+            <span class="lw-stat-label">videos</span>
+          </div>
+          <div class="lw-stat lw-stat-streak">
+            <span class="lw-stat-num" id="lw-stat-streak" title="Tap to see calendar">–</span>
+            <span class="lw-stat-label">streak</span>
+          </div>
+        </div>
+
+        <div id="lw-streak-calendar" style="display:none"></div>
+
+        <div class="lw-section-head lw-section-head-spaced">
           <label class="lw-label">Saved lessons</label>
           <span class="lw-badge" id="lw-saved-count">0</span>
         </div>
+
+        <div class="lw-filter-chips" id="lw-filter-chips"></div>
+
         <p class="lw-hint lw-hint-block">Tap to review instantly. ↻ runs a fresh lesson (uses API).</p>
+
         <ul class="lw-phrase-list lw-saved-list" id="lw-saved-lessons"></ul>
+
         <div class="lw-mini-actions">
           <button type="button" class="lw-btn-ghost" id="lw-export-csv">Export CSV</button>
           <button type="button" class="lw-btn-ghost lw-btn-danger" id="lw-clear-saved">Clear saved</button>

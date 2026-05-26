@@ -424,3 +424,243 @@ body {
   border-color: rgba(255, 255, 255, 0.35);
   box-shadow: none;
 }
+
+/* ── Wordbook: stats bar ──────────────────────────────────────────────────── */
+.lw-stats-bar {
+  display: flex;
+  gap: 6px;
+  margin: 0 0 10px;
+}
+
+.lw-stat {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 8px 4px 6px;
+  background: rgba(255, 255, 255, 0.04);
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.lw-stat-num {
+  font-size: 18px;
+  font-weight: 700;
+  color: #f8fafc;
+  line-height: 1;
+}
+
+.lw-stat-label {
+  font-size: 10px;
+  color: #94a3b8;
+  margin-top: 3px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.lw-stat-streak {
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.lw-stat-streak:hover {
+  background: rgba(168, 85, 247, 0.12);
+  border-color: rgba(168, 85, 247, 0.3);
+}
+
+.lw-stat-streak .lw-stat-num {
+  color: #fbbf24;
+}
+
+.lw-section-head-spaced {
+  margin-top: 10px;
+}
+
+/* ── Wordbook: filter chips ───────────────────────────────────────────────── */
+.lw-filter-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-bottom: 8px;
+}
+
+.lw-chip {
+  padding: 3px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: transparent;
+  color: #94a3b8;
+  font-size: 11px;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+  white-space: nowrap;
+}
+
+.lw-chip:hover {
+  background: rgba(255, 255, 255, 0.06);
+  color: #e2e8f0;
+}
+
+.lw-chip-active {
+  background: rgba(168, 85, 247, 0.25);
+  border-color: rgba(168, 85, 247, 0.5);
+  color: #e9d5ff;
+}
+
+/* ── Wordbook: lesson rows ────────────────────────────────────────────────── */
+.lw-saved-list .lw-saved-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  padding: 8px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.lw-saved-list .lw-saved-row:last-child {
+  border-bottom: none;
+}
+
+.lw-row-main {
+  flex: 1;
+  min-width: 0;
+}
+
+.lw-row-btn {
+  display: block;
+  width: 100%;
+  text-align: left;
+  background: none;
+  border: none;
+  padding: 4px 6px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.lw-row-btn:hover {
+  background: rgba(168, 85, 247, 0.12);
+}
+
+.lw-row-es {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  color: #f8fafc;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.lw-row-en {
+  display: block;
+  font-size: 11px;
+  color: #94a3b8;
+  margin-top: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.lw-row-chip {
+  display: inline-block;
+  margin-top: 5px;
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: rgba(168, 85, 247, 0.22);
+  color: #e9d5ff;
+  font-size: 10px;
+  font-weight: 600;
+}
+
+.lw-row-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+/* Scoped icon button override — keeps the existing .lw-btn-icon styling
+   intact for any other use site, but uses a compact bare-icon look inside
+   the new wordbook action column. */
+.lw-row-actions .lw-btn-icon {
+  flex: 0 0 auto;
+  width: 28px;
+  height: 26px;
+  padding: 0;
+  font-size: 14px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: #cbd5e1;
+  border-radius: 8px;
+  opacity: 0.85;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.lw-row-actions .lw-btn-icon:hover {
+  opacity: 1;
+  background: rgba(168, 85, 247, 0.2);
+  border-color: rgba(168, 85, 247, 0.4);
+  color: #f8fafc;
+}
+
+/* ── Streak calendar ──────────────────────────────────────────────────────── */
+#lw-streak-calendar {
+  margin: 4px 0 6px;
+}
+
+.lw-cal-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 3px;
+  padding: 8px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 10px;
+}
+
+.lw-cal-dow {
+  font-size: 9px;
+  text-align: center;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.lw-cal-day {
+  aspect-ratio: 1;
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.lw-cal-active {
+  background: #fbbf24;
+}
+
+.lw-cal-today {
+  outline: 2px solid #a855f7;
+  outline-offset: 1px;
+}
+
+.lw-cal-empty {
+  background: transparent;
+}
+
+/* ── Wordbook: empty + overflow hints ─────────────────────────────────────── */
+.lw-empty-state {
+  padding: 18px 8px;
+  color: #64748b;
+  font-size: 12px;
+  text-align: center;
+  line-height: 1.6;
+  list-style: none;
+}
+
+.lw-more-hint {
+  font-size: 11px;
+  color: #64748b;
+  text-align: center;
+  padding: 8px 0 2px;
+  list-style: none;
+}
