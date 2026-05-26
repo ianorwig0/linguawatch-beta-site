@@ -654,6 +654,21 @@ async function maybeShowShiftLTip() {
   }
 }
 
+/** Streak tracker. Stores one ISO date per calendar day a lesson was completed.
+ *  Uses local date so the streak rolls over at the user's midnight, not UTC. */
+async function tickStreakDay() {
+  const todayStr = new Date().toLocaleDateString("en-CA");
+  try {
+    const res = await browser.storage.local.get({ dailyLessonDates: [] });
+    const days = Array.isArray(res.dailyLessonDates) ? res.dailyLessonDates : [];
+    if (days[0] === todayStr) return;
+    days.unshift(todayStr);
+    await browser.storage.local.set({ dailyLessonDates: days.slice(0, 365) });
+  } catch (e) {
+    console.warn("[LinguaWatch] streak tick", e);
+  }
+}
+
 async function persistLessonRecord(data) {
   if (!data || !data.englishPhrase) return;
   const record = {
@@ -691,6 +706,7 @@ async function persistLessonRecord(data) {
       list.unshift(record);
       await browser.storage.local.set({ savedLessons: list.slice(0, MAX_SAVED_LESSONS) });
     }
+    await tickStreakDay();
   } catch (e) {
     console.warn("[LinguaWatch] persist lesson", e);
   }
@@ -1539,6 +1555,17 @@ browser.runtime.onMessage.addListener(function (message, _sender, sendResponse) 
     } else {
       showQuickReview(record);
       sendResponse({ ok: true });
+    }
+    return false;
+  }
+
+  if (message.type === "LW_SPEAK") {
+    const text = String(message.text || "").trim();
+    const voice = typeof message.voice === "string" && message.voice ? message.voice : TTS_VOICE_ES;
+    if (text) {
+      fetchTtsB64(text, TTS_SPEED_ES, null, voice).then(function (b64) {
+        if (b64) playAudioBase64(b64).catch(function () {});
+      });
     }
     return false;
   }
